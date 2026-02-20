@@ -1,9 +1,10 @@
+import 'package:app_early_learning/features/auth/screens/feedback_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_constants.dart';
 import '../../auth/screens/login_screen.dart';
 import '../screens/edu_home_screen.dart';
 import '../models/screen_args_model.dart';
-import '../../auth/screens/profile_screen.dart';
+import '../../auth/screens/change_password_screen.dart';
 import '../screens/web_view_screen.dart';
 
 class NavigationService {
@@ -38,14 +39,16 @@ class NavigationService {
             MaterialPageRoute(builder: (context) => WebViewScreen(args: args)),
           );
           break;
-        case AppPageRoute.profile:
+        case AppPageRoute.changePassword:
           navigatorKey.currentState?.push(
-            MaterialPageRoute(builder: (context) => ProfileScreen(args: args)),
+            MaterialPageRoute(
+              builder: (context) => ChangePasswordScreen(args: args),
+            ),
           );
           break;
-        case AppPageRoute.updatePassword:
+        case AppPageRoute.feedback:
           navigatorKey.currentState?.push(
-            MaterialPageRoute(builder: (context) => ProfileScreen(args: args)),
+            MaterialPageRoute(builder: (context) => FeedbackScreen(args: args)),
           );
           break;
         default:

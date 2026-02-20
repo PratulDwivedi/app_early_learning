@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_service_provider.dart';
 import '../providers/event_service_provider.dart';
 
 class GradientHeader extends ConsumerWidget {
@@ -8,6 +9,7 @@ class GradientHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(summaryCountProvider);
+    final currentUser = ref.watch(authProvider);
 
     // Extract notification count from summary data
     int notificationCount = 0;
@@ -133,6 +135,37 @@ class GradientHeader extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 20),
+                if (currentUser == null)
+                  const SizedBox(
+                    height: 120,
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      const SizedBox(height: 20),
+
+                      // 🏷 User Name
+                      Text(
+                        currentUser.fullName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        currentUser.email,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 summaryAsync.when(
                   loading: () => const SizedBox(
                     height: 120,
@@ -170,8 +203,7 @@ class GradientHeader extends ConsumerWidget {
                         response.firstOrNull ??
                         {'delegates': 0, 'speakers': 0, 'exhibitors': 0};
 
-                    final eventName =
-                        stats['event_name']?.toString() ?? 'Event';
+                    final eventName = stats['event_name']?.toString() ?? '';
 
                     return Column(
                       children: [

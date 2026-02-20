@@ -23,16 +23,47 @@ class SupabaseAuthService implements AuthService {
     required String email,
     required String password,
   }) async {
-    return await SupabaseApiHelper.signin(ApiRoutes.signIn, {
+    final authResponse = await SupabaseApiHelper.signin(ApiRoutes.signIn, {
       'email': email,
       'password': password,
     });
+
+    // If signin succeeded, fetch profile and cache it locally
+    if (authResponse.accessToken!.isNotEmpty) {
+      try {
+        final profileResponse = await SupabaseApiHelper.post(
+          ApiRoutes.profile,
+          null,
+        );
+
+        if (profileResponse.isSuccess) {
+          final prefs = await SharedPreferences.getInstance();
+          // store the first item from response.data as user_profile
+          if (profileResponse.data.isNotEmpty) {
+            await prefs.setString(
+              'user_profile',
+              json.encode(profileResponse.data[0]),
+            );
+          }
+        }
+      } catch (e) {
+        // ignore profile caching errors for now; signin still succeeded
+      }
+    }
+
+    return authResponse;
   }
 
   @override
   Future<ResponseMessageModel> getProfile() {
     return SupabaseApiHelper.safeApiCall(() async {
-      return await SupabaseApiHelper.post(ApiRoutes.profile, null);
+      final response = await SupabaseApiHelper.post(ApiRoutes.profile, null);
+
+      if (response.isSuccess) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_profile', json.encode(response.data[0]));
+      }
+      return response;
     });
   }
 
@@ -68,6 +99,15 @@ class SupabaseAuthService implements AuthService {
     return SupabaseApiHelper.safeApiCall(() async {
       return await SupabaseApiHelper.post(ApiRoutes.updateProfilePic, {
         'p_profile_pic': profilePicPath,
+      });
+    });
+  }
+
+  @override
+  Future<ResponseMessageModel> submitFeedback(String feedback) {
+    return SupabaseApiHelper.safeApiCall(() async {
+      return await SupabaseApiHelper.post(ApiRoutes.feedback, {
+        'p_feedback': feedback,
       });
     });
   }

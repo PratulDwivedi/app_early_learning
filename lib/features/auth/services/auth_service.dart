@@ -33,4 +33,6 @@ abstract class AuthService {
   );
 
   Future<ResponseMessageModel> updateProfilePicture(String profilePicPath);
+
+  Future<ResponseMessageModel> submitFeedback(String feedback);
 }

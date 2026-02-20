@@ -31,45 +31,45 @@ class CurrentUser {
       tenantName: json['tenant_name'],
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'uid': uid,
-      'data': data.toJson(),
-      'email': email,
-      'full_name': fullName,
-      'tenant_id': tenantId,
-      'user_name': userName,
-      'tenant_name': tenantName,
-    };
-  }
 }
 
 class UserPreferences {
-  final bool isAdmin;
-  final String dateFormat;
-  final String datetimeFormat;
+  final bool? isAdmin;
+  final String? dateFormat;
+  final String? datetimeFormat;
+  final String? profilePic;
 
   UserPreferences({
-    required this.isAdmin,
-    required this.dateFormat,
-    required this.datetimeFormat,
+    this.isAdmin,
+    this.dateFormat,
+    this.datetimeFormat,
+    this.profilePic,
   });
 
-  factory UserPreferences.fromJson(Map<String, dynamic> json) {
+  factory UserPreferences.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return UserPreferences();
+
+    final dynamic isAdminVal = json['is_admin'];
+    bool? isAdmin;
+    if (isAdminVal is bool) {
+      isAdmin = isAdminVal;
+    } else if (isAdminVal is int) {
+      isAdmin = isAdminVal == 1;
+    } else if (isAdminVal is String) {
+      final lower = isAdminVal.toLowerCase();
+      if (lower == 'true' || lower == '1') {
+        isAdmin = true;
+      } else if (lower == 'false' || lower == '0') {
+        isAdmin = false;
+      }
+    }
+
     return UserPreferences(
-      isAdmin: json['is_admin'],
-      dateFormat: json['date_format'],
-      datetimeFormat: json['datetime_format'],
+      isAdmin: isAdmin,
+      dateFormat: json['date_format'] as String?,
+      datetimeFormat: json['datetime_format'] as String?,
+      profilePic: json['profile_pic'] as String?,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'is_admin': isAdmin,
-      'date_format': dateFormat,
-      'datetime_format': datetimeFormat,
-    };
-  }
 }

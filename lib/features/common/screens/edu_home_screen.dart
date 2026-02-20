@@ -4,7 +4,6 @@ import '../widgets/app_sidebar_drawer.dart';
 import '../widgets/feature_grid.dart';
 import '../widgets/gradient_header.dart';
 
-
 class EduHomeScreen extends ConsumerWidget {
   const EduHomeScreen({super.key});
 

@@ -26,12 +26,6 @@ final profileProvider = FutureProvider<ResponseMessageModel>((ref) async {
   return await service.getProfile();
 });
 
-/// 👤 User Profile Provider (derived from CurrentUser)
-final userProfileProvider = Provider<Map<String, dynamic>?>((ref) {
-  final user = ref.watch(authProvider);
-  return user?.toJson();
-});
-
 /// ✅ Simple boolean auth check (useful for guards)
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(authProvider) != null;
@@ -62,4 +56,10 @@ final updatePasswordProvider =
         passwords['newPassword']!,
         passwords['confirmPassword']!,
       );
+    });
+
+final submitFeedbackProvider =
+    FutureProvider.family<ResponseMessageModel, String>((ref, feedback) async {
+      final service = ref.watch(authServiceProvider);
+      return await service.submitFeedback(feedback);
     });

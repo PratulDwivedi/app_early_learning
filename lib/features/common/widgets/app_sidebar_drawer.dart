@@ -11,8 +11,7 @@ class AppSidebarDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileProvider);
-
+    final currentUser = ref.watch(authProvider);
 
     return Drawer(
       child: Container(
@@ -36,75 +35,65 @@ class AppSidebarDrawer extends ConsumerWidget {
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                  child: profileAsync.when(
-                    loading: () => const SizedBox(
-                      height: 120,
-                      child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    ),
-                    error: (err, _) => const SizedBox(
-                      height: 120,
-                      child: Center(
-                        child: Text(
-                          'Profile Error',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    data: (response) {
-                      if (!response.isSuccess) {
-                        return const SizedBox(
+                  child: currentUser == null
+                      ? const SizedBox(
                           height: 120,
                           child: Center(
-                            child: Text(
-                              'Profile Not Available',
-                              style: TextStyle(color: Colors.white),
-                            ),
+                            child: CircularProgressIndicator(color: Colors.white),
                           ),
-                        );
-                      }
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // User Avatar
+                            Builder(builder: (context) {
+                              final pic = currentUser.data.profilePic ?? '';
+                              final profilePic = pic.isNotEmpty
+                                  ? '${appConfig.storageUrl}/$pic'
+                                  : '';
 
-                      final profileData = response.firstOrNull ?? {};
-                      final fullName =
-                          profileData['full_name']?.toString() ?? 'User';
-                      final email = profileData['e_mail_id']?.toString() ?? '';
-
-                      final profilePic =
-                          '${appConfig.storageUrl}/${profileData['profile_pic']?.toString()}';
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // User Avatar
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.white,
-                            backgroundImage: NetworkImage(profilePic),
-                          ),
-                          const SizedBox(height: 16),
-                          // User Name
-                          Text(
-                            fullName,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              return CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.white,
+                                backgroundImage: profilePic.isNotEmpty
+                                    ? NetworkImage(profilePic)
+                                    : null,
+                                child: profilePic.isEmpty
+                                    ? Text(
+                                        (currentUser.fullName.isNotEmpty
+                                                ? currentUser.fullName[0]
+                                                : 'U')
+                                            .toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      )
+                                    : null,
+                              );
+                            }),
+                            const SizedBox(height: 16),
+                            // User Name
+                            Text(
+                              currentUser.fullName,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          // User Email
-                          Text(
-                            email,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                            const SizedBox(height: 4),
+                            // User Email
+                            Text(
+                              currentUser.email,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -115,14 +104,14 @@ class AppSidebarDrawer extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
                   _DrawerMenuItem(
-                    icon: getPageIcon('profile'),
+                    icon: Icons.password,
                     iconColor: const Color(0xFFFF6B6B),
-                    title: 'Profile',
+                    title: 'Change Password',
                     onTap: () {
                       Navigator.pop(context);
                       ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                        routeName: AppPageRoute.profile,
-                        name: "Profile",
+                        routeName: AppPageRoute.changePassword,
+                        name: "Change Password",
                       );
 
                       NavigationService.navigateTo(
@@ -131,42 +120,41 @@ class AppSidebarDrawer extends ConsumerWidget {
                       );
                     },
                   ),
-                  _DrawerMenuItem(
-                    icon: getPageIcon('helpline'),
-                    iconColor: const Color(0xFFFFC107),
-                    title: 'Help',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                        routeName: "webview",
-                        name: "Helpline",
-                        data: {"page_id": AppPageIds.helpLine},
-                      );
+                  // _DrawerMenuItem(
+                  //   icon: getPageIcon('helpline'),
+                  //   iconColor: const Color(0xFFFFC107),
+                  //   title: 'Help',
+                  //   onTap: () {
+                  //     Navigator.pop(context);
+                  //     ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                  //       routeName: "webview",
+                  //       name: "Helpline",
+                  //       data: {"page_id": AppPageIds.helpLine},
+                  //     );
 
-                      NavigationService.navigateTo(
-                        screenArgsModel.routeName,
-                        arguments: screenArgsModel,
-                      );
-                    },
-                  ),
-                  _DrawerMenuItem(
-                    icon: getPageIcon('faq'),
-                    iconColor: const Color(0xFFFFA726),
-                    title: 'Feedback',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                        routeName: "webview",
-                        name: "Feedback",
-                        data: {"page_id": AppPageIds.faqs},
-                      );
+                  //     NavigationService.navigateTo(
+                  //       screenArgsModel.routeName,
+                  //       arguments: screenArgsModel,
+                  //     );
+                  //   },
+                  // ),
+                  // _DrawerMenuItem(
+                  //   icon: getPageIcon('faq'),
+                  //   iconColor: const Color(0xFFFFA726),
+                  //   title: 'Feedback',
+                  //   onTap: () {
+                  //     Navigator.pop(context);
+                  //     ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                  //       routeName: AppPageRoute.feedback,
+                  //       name: "Feedback",
+                  //     );
 
-                      NavigationService.navigateTo(
-                        screenArgsModel.routeName,
-                        arguments: screenArgsModel,
-                      );
-                    },
-                  ),
+                  //     NavigationService.navigateTo(
+                  //       screenArgsModel.routeName,
+                  //       arguments: screenArgsModel,
+                  //     );
+                  //   },
+                  // ),
                   const Divider(height: 32, thickness: 1),
                   _DrawerMenuItem(
                     icon: Icons.logout,

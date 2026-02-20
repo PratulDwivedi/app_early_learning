@@ -10,14 +10,16 @@ class ApiRoutes {
   static const String summaryCount = 'edu.fn_get_student_summary';
   static const String fileMetadata = '';
   static const String htmlContent = '';
+  static const String feedback = 'edu.fn_save_feedback';
 }
 
 class AppPageRoute {
   static const String webview = 'webview';
   static const String signIn = 'signIn';
   static const String profile = 'profile';
-  static const String updatePassword = 'updatePassword';
+  static const String changePassword = 'changePassword';
   static const String helpline = 'helpline';
+  static const String feedback = 'feedback';
 }
 
 class AppPageIds {
