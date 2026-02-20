@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web-App",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["-d", "chrome"]
+    },
+    {
+      "name": "Android-Emulator",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "emulator-5554"
+    },
+    {
+      "name": "Android-moto",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "ZA222N2QGK"
+    },
+    {
+      "name": "iPad-Simulator",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "4530D656-A926-4594-B5FE-3920A27BFF19"
+    },
+    {
+      "name": "iOS-Simulator",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "B6F81B30-2899-4FDB-80E2-EDDD4C1015BB"
+    }
+  ]
+}
