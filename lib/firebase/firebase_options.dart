@@ -40,19 +40,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAzMLRQciPV_hy5nhHZBKZVjzBdjNvQchU',
-    appId: '1:323971870247:android:a86470032db21c1cac6802',
-    messagingSenderId: '323971870247',
-    projectId: 'artificialwit-b46a2',
-    storageBucket: 'artificialwit-b46a2.firebasestorage.app',
+    apiKey: '',
+    appId: '',
+    messagingSenderId: '',
+    projectId: '',
+    storageBucket: '',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAOX512yirpcBYlN6-tPcktuTYuxdSvwFM',
-    appId: '1:323971870247:ios:c20d406f6e43c4adac6802',
-    messagingSenderId: '323971870247',
-    projectId: 'artificialwit-b46a2',
-    storageBucket: 'artificialwit-b46a2.firebasestorage.app',
-    iosBundleId: 'com.awt.waakit',
+    apiKey: '',
+    appId: '',
+    messagingSenderId: '',
+    projectId: '',
+    storageBucket: '',
+    iosBundleId: '',
   );
 }
