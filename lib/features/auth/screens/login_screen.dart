@@ -25,8 +25,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   void initState() {
     super.initState();
 
-    _emailController.text = "pratul@gmail.com";
-    _passwordController.text = "fai@123";
+    _emailController.text = "admin@earlylearning.com";
+    _passwordController.text = "Admin@123";
   }
 
   @override
@@ -52,20 +52,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     setState(() => _isLoading = false);
 
-    if (!apiResponse.isSuccess) {
-      AppSnackbarService.error(apiResponse.message);
-      return;
-    }
-
-    if (apiResponse.data.isEmpty) {
-      AppSnackbarService.error('Login succeeded but profile not found');
+    if (apiResponse.accessToken!.isEmpty) {
+      AppSnackbarService.error(
+        apiResponse.msg?.isEmpty ?? true
+            ? 'Login failed: No access  received'
+            : apiResponse.msg!,
+      );
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_profile', json.encode(apiResponse.data.first));
-    await prefs.setString('access_token', apiResponse.data[0]['access_token']);
-
+    await prefs.setString('access_token', apiResponse.accessToken!);
     NavigationService.clearAndNavigate('home');
   }
 

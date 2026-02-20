@@ -1,49 +1,75 @@
 class CurrentUser {
-  final int id;
-  final int eventId;
-  final String loginId;
+  final String id;
+  final int uid;
+  final UserPreferences data;
+  final String email;
   final String fullName;
-  final DateTime issuedOn;
   final int tenantId;
-  final DateTime expiresOn;
-  final String accessToken;
+  final String userName;
+  final String tenantName;
 
   CurrentUser({
     required this.id,
-    required this.eventId,
-    required this.loginId,
+    required this.uid,
+    required this.data,
+    required this.email,
     required this.fullName,
-    required this.issuedOn,
     required this.tenantId,
-    required this.expiresOn,
-    required this.accessToken,
+    required this.userName,
+    required this.tenantName,
   });
 
-  /// Factory constructor to create object from JSON
   factory CurrentUser.fromJson(Map<String, dynamic> json) {
     return CurrentUser(
-      id: json['id'] as int,
-      eventId: json['event_id'] as int,
-      loginId: json['login_id'] as String,
-      fullName: json['full_name'] as String,
-      issuedOn: DateTime.parse(json['issued_on']),
-      tenantId: json['tenant_id'] as int,
-      expiresOn: DateTime.parse(json['expires_on']),
-      accessToken: json['access_token'] as String,
+      id: json['id'],
+      uid: json['uid'],
+      data: UserPreferences.fromJson(json['data']),
+      email: json['email'],
+      fullName: json['full_name'],
+      tenantId: json['tenant_id'],
+      userName: json['user_name'],
+      tenantName: json['tenant_name'],
     );
   }
 
-  /// Convert object back to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'event_id': eventId,
-      'login_id': loginId,
+      'uid': uid,
+      'data': data.toJson(),
+      'email': email,
       'full_name': fullName,
-      'issued_on': issuedOn.toIso8601String(),
       'tenant_id': tenantId,
-      'expires_on': expiresOn.toIso8601String(),
-      'access_token': accessToken,
+      'user_name': userName,
+      'tenant_name': tenantName,
+    };
+  }
+}
+
+class UserPreferences {
+  final bool isAdmin;
+  final String dateFormat;
+  final String datetimeFormat;
+
+  UserPreferences({
+    required this.isAdmin,
+    required this.dateFormat,
+    required this.datetimeFormat,
+  });
+
+  factory UserPreferences.fromJson(Map<String, dynamic> json) {
+    return UserPreferences(
+      isAdmin: json['is_admin'],
+      dateFormat: json['date_format'],
+      datetimeFormat: json['datetime_format'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'is_admin': isAdmin,
+      'date_format': dateFormat,
+      'datetime_format': datetimeFormat,
     };
   }
 }

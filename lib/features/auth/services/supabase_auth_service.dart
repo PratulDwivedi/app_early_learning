@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_constants.dart';
+import '../../common/models/auth_response_model.dart';
 import '../../common/models/response_message_model.dart';
 import '../../common/services/supabase_api_helper.dart';
 import '../models/current_user.dart';
@@ -18,15 +19,13 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
-  Future<ResponseMessageModel> signIn({
+  Future<AuthResponseModel> signIn({
     required String email,
     required String password,
-  }) {
-    return SupabaseApiHelper.safeApiCall(() async {
-      return await SupabaseApiHelper.post(ApiRoutes.signIn, {
-        'p_login_id': email,
-        'p_password': password,
-      });
+  }) async {
+    return await SupabaseApiHelper.signin(ApiRoutes.signIn, {
+      'email': email,
+      'password': password,
     });
   }
 

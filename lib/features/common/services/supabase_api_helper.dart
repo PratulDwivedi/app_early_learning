@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
+import '../models/auth_response_model.dart';
 import '../models/response_message_model.dart';
 
 class SupabaseApiHelper {
@@ -9,7 +10,7 @@ class SupabaseApiHelper {
     final prefs = await SharedPreferences.getInstance();
 
     // Default schema
-    String schema = 'edu';
+    String schema = 'public';
 
     if (route != null && route.trim().isNotEmpty) {
       final parts = route.trim().split('.');
@@ -25,7 +26,7 @@ class SupabaseApiHelper {
       'Content-Profile': schema, // Supabase schema
       'apikey': appConfig.localKey,
       if (accessToken != null && accessToken.isNotEmpty)
-        'access_token': accessToken,
+        'Authorization': 'Bearer $accessToken',
     };
   }
 
@@ -37,6 +38,23 @@ class SupabaseApiHelper {
     } catch (e) {
       return ResponseMessageModel.error(message: e.toString());
     }
+  }
+
+  static Future<AuthResponseModel> signin(
+    String route,
+    Map<String, dynamic>? data,
+  ) async {
+    final headers = await httpHeader(route);
+
+    Uri uri = Uri.parse(
+      '${appConfig.apiBaseUrl}/auth/v1/token?grant_type=password',
+    );
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    return AuthResponseModel.fromJson(jsonDecode(response.body));
   }
 
   // POST request

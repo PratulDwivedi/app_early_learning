@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 class ApiRoutes {
-  static const String signIn = 'edu.fn_signin_mobile_delegate';
-  static const String profile = 'edu.fn_get_mobile_delegate';
+  static const String signIn = 'auth/v1/token?grant_type=password';
+  static const String signUp = 'edu-guardian-signup';
+  static const String profile = 'public.fn_get_profile';
   static const String updatePassword = 'edu.fn_update_delegate_password';
   static const String updateProfilePic = 'edu.fn_update_delegate_profile_pic';
   static const String uploadFile = 'edu/v1/upload-file';
-  static const String banners = 'edu.fn_get_mobile_banners';
-  static const String feedbackParams = 'edu.fn_get_mobile_feedback_params';
-
-  static const String summaryCount = '';
+  static const String summaryCount = 'edu.fn_get_student_summary';
   static const String fileMetadata = '';
   static const String htmlContent = '';
 }

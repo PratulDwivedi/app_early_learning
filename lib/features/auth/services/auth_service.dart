@@ -1,4 +1,5 @@
 import '../../../config/app_config.dart';
+import '../../common/models/auth_response_model.dart';
 import '../../common/models/response_message_model.dart';
 import '../models/current_user.dart';
 import 'supabase_auth_service.dart';
@@ -16,7 +17,7 @@ abstract class AuthService {
 
   Future<CurrentUser?> getCurrentUser();
 
-  Future<ResponseMessageModel> signIn({
+  Future<AuthResponseModel> signIn({
     required String email,
     required String password,
   });

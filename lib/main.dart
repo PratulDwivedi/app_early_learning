@@ -12,6 +12,7 @@ import 'firebase/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  /*
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -23,11 +24,15 @@ void main() async {
   runApp(
     ProviderScope(child: MyApp(notificationServices: notificationServices)),
   );
+ */
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
-  final NotificationServices notificationServices;
-  const MyApp({super.key, required this.notificationServices});
+  // final NotificationServices notificationServices;
+  // const MyApp({super.key, required this.notificationServices});
+
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,7 +41,8 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
       onGenerateRoute: NavigationService.onGenerateRoute,
-      home: AuthWrapper(notificationServices: notificationServices),
+      home: AuthWrapper(),
+      // home: AuthWrapper(notificationServices: notificationServices),
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: AppSnackbarService.scaffoldMessengerKey,
     );
