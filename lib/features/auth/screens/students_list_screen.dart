@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/services/navigation_service.dart';
+import '../../common/models/screen_args_model.dart';
 import '../providers/theme_provider.dart';
 import '../../common/providers/student_provider.dart';
 import '../../../config/app_constants.dart';
@@ -252,14 +253,20 @@ class StudentsListView extends ConsumerWidget {
                                 PopupMenuItem(
                                   child: const Row(
                                     children: [
-                                      Icon(Icons.question_answer),
+                                      Icon(Icons.add_chart_rounded),
                                       SizedBox(width: 8),
                                       Text('Report Card'),
                                     ],
                                   ),
                                   onTap: () {
+                                    ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                                      routeName: AppPageRoute.reports,
+                                      name: '$firstName $lastName - Report Card',
+                                      data: student,
+                                    );
                                     NavigationService.navigateTo(
-                                      AppPageRoute.evaluation,
+                                      screenArgsModel.routeName,
+                                      arguments: screenArgsModel,
                                     );
                                   },
                                 ),

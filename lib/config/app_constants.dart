@@ -32,6 +32,7 @@ class AppPageRoute {
   static const String helpline = 'helpline';
   static const String feedback = 'feedback';
   static const String guardians = 'guardians';
+  static const String reports = 'reports';
 }
 
 class AppPageIds {

@@ -87,3 +87,16 @@ final getGuardiansProvider = FutureProvider.autoDispose<List<Guardian>>(
     return [];
   },
 );
+
+// Student Summary Provider - for charts (Pie and Bar)
+final studentSummaryProvider = FutureProvider.autoDispose<List<dynamic>>(
+  (ref) async {
+    final service = ref.watch(eduServiceProvider);
+    final response = await service.getSummaryCount();
+    
+    if (response.isSuccess && response.data.isNotEmpty) {
+      return response.data as List<dynamic>;
+    }
+    return [];
+  },
+);

@@ -29,7 +29,7 @@ class BottomNavBar extends ConsumerWidget {
                 isActive: false,
                 onTap: () {
                   ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                    routeName: AppPageRoute.profile,
+                    routeName: AppPageRoute.reports,
                     name: "Reports",
                     data: {},
                   );
