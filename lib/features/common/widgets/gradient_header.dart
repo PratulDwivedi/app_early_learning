@@ -73,8 +73,11 @@ class GradientHeader extends ConsumerWidget {
                     Row(
                       children: [
                         IconButton(
-                          onPressed: () {
-                            // Refresh action
+                          onPressed: () async {
+                            // Refresh user data from server
+                            await ref
+                                .read(authProvider.notifier)
+                                .refreshUserFromServer();
                           },
                           icon: const Icon(Icons.refresh, color: Colors.white),
                           style: IconButton.styleFrom(
@@ -114,25 +117,32 @@ class GradientHeader extends ConsumerWidget {
                 else
                   Column(
                     children: [
-                      const SizedBox(height: 20),
-
-                      // 🏷 User Name
                       Text(
-                        currentUser.fullName,
+                        currentUser.tenantName,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+
+                      // 🏷 User Name
+                      Text(
+                        currentUser.fullName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
                       Text(
                         currentUser.email,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 if (currentUser != null)

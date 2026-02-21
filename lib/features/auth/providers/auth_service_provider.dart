@@ -33,6 +33,23 @@ class AuthNotifier extends StateNotifier<CurrentUser?> {
   void clearUser() {
     state = null;
   }
+
+  /// Refresh user data from server and update local state
+  Future<void> refreshUserFromServer() async {
+    try {
+      final service = ref.watch(authServiceProvider);
+      final profileResponse = await service.getProfile();
+      
+      if (profileResponse.isSuccess) {
+        // Parse the fresh user data and update state
+        final user = CurrentUser.fromJson(profileResponse.data[0]);
+        setUser(user);
+      }
+    } catch (e) {
+      // Log error but don't throw - keep current user state
+      print('Error refreshing user from server: $e');
+    }
+  }
 }
 
 final profileProvider = FutureProvider<ResponseMessageModel>((ref) async {

@@ -61,6 +61,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       );
       return;
     }
+
+    // Refresh user data from server after successful login
+    await ref.read(authProvider.notifier).refreshUserFromServer();
+
     NavigationService.clearAndNavigate('home');
   }
 
