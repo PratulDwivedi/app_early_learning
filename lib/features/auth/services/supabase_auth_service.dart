@@ -55,6 +55,8 @@ class SupabaseAuthService implements AuthService {
           final prefs = await SharedPreferences.getInstance();
           // store the first item from response.data as user_profile
           if (profileResponse.data.isNotEmpty) {
+            await prefs.setString('access_token', authResponse.accessToken!);
+            await prefs.setString('refresh_token', authResponse.refreshToken!);
             await prefs.setString(
               'user_profile',
               json.encode(profileResponse.data[0]),

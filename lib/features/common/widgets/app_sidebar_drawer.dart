@@ -5,6 +5,7 @@ import '../../../config/app_constants.dart';
 import '../models/screen_args_model.dart';
 import '../services/navigation_service.dart';
 import '../../auth/providers/auth_service_provider.dart';
+import '../../auth/providers/theme_provider.dart';
 
 class AppSidebarDrawer extends ConsumerWidget {
   const AppSidebarDrawer({super.key});
@@ -12,23 +13,25 @@ class AppSidebarDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(authProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
+    final colors = ref.watch(themeColorsProvider);
 
     return Drawer(
       child: Container(
-        color: Colors.white,
+        color: colors.bgColor,
         child: Column(
           children: [
             // Header with gradient
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF8BC34A), // Light Green
-                    Color(0xFF4CAF50), // Main Green
-                    Color(0xFF2E7D32), // Deep Green
+                    primaryColor.withOpacity(0.6),
+                    primaryColor,
+                    primaryColor.withOpacity(0.8),
                   ],
                 ),
               ),
@@ -39,40 +42,44 @@ class AppSidebarDrawer extends ConsumerWidget {
                       ? const SizedBox(
                           height: 120,
                           child: Center(
-                            child: CircularProgressIndicator(color: Colors.white),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
                           ),
                         )
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // User Avatar
-                            Builder(builder: (context) {
-                              final pic = currentUser.data.profilePic ?? '';
-                              final profilePic = pic.isNotEmpty
-                                  ? '${appConfig.storageUrl}/$pic'
-                                  : '';
+                            Builder(
+                              builder: (context) {
+                                final pic = currentUser.data.profilePic ?? '';
+                                final profilePic = pic.isNotEmpty
+                                    ? '${appConfig.storageUrl}/$pic'
+                                    : '';
 
-                              return CircleAvatar(
-                                radius: 40,
-                                backgroundColor: Colors.white,
-                                backgroundImage: profilePic.isNotEmpty
-                                    ? NetworkImage(profilePic)
-                                    : null,
-                                child: profilePic.isEmpty
-                                    ? Text(
-                                        (currentUser.fullName.isNotEmpty
-                                                ? currentUser.fullName[0]
-                                                : 'U')
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
-                                        ),
-                                      )
-                                    : null,
-                              );
-                            }),
+                                return CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: profilePic.isNotEmpty
+                                      ? NetworkImage(profilePic)
+                                      : null,
+                                  child: profilePic.isEmpty
+                                      ? Text(
+                                          (currentUser.fullName.isNotEmpty
+                                                  ? currentUser.fullName[0]
+                                                  : 'U')
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryColor,
+                                          ),
+                                        )
+                                      : null,
+                                );
+                              },
+                            ),
                             const SizedBox(height: 16),
                             // User Name
                             Text(
@@ -120,48 +127,14 @@ class AppSidebarDrawer extends ConsumerWidget {
                       );
                     },
                   ),
-                  // _DrawerMenuItem(
-                  //   icon: getPageIcon('helpline'),
-                  //   iconColor: const Color(0xFFFFC107),
-                  //   title: 'Help',
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                  //       routeName: "webview",
-                  //       name: "Helpline",
-                  //       data: {"page_id": AppPageIds.helpLine},
-                  //     );
 
-                  //     NavigationService.navigateTo(
-                  //       screenArgsModel.routeName,
-                  //       arguments: screenArgsModel,
-                  //     );
-                  //   },
-                  // ),
-                  // _DrawerMenuItem(
-                  //   icon: getPageIcon('faq'),
-                  //   iconColor: const Color(0xFFFFA726),
-                  //   title: 'Feedback',
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                  //       routeName: AppPageRoute.feedback,
-                  //       name: "Feedback",
-                  //     );
-
-                  //     NavigationService.navigateTo(
-                  //       screenArgsModel.routeName,
-                  //       arguments: screenArgsModel,
-                  //     );
-                  //   },
-                  // ),
-                  const Divider(height: 32, thickness: 1),
+                  Divider(height: 32, thickness: 1, color: colors.hintColor),
                   _DrawerMenuItem(
                     icon: Icons.logout,
                     iconColor: const Color(0xFF9C27B0),
                     title: 'Logout',
                     onTap: () {
-                      _showLogoutDialog(context, ref);
+                      _showLogoutDialog(context, ref, colors, primaryColor);
                     },
                   ),
                 ],
@@ -173,17 +146,26 @@ class AppSidebarDrawer extends ConsumerWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+  void _showLogoutDialog(
+    BuildContext context,
+    WidgetRef ref,
+    var colors,
+    Color primaryColor,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: colors.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text('Logout', style: TextStyle(color: colors.textColor)),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(color: colors.textColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: primaryColor)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -198,7 +180,7 @@ class AppSidebarDrawer extends ConsumerWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: primaryColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -213,7 +195,7 @@ class AppSidebarDrawer extends ConsumerWidget {
 
 // ==================== DRAWER MENU ITEM ====================
 
-class _DrawerMenuItem extends StatelessWidget {
+class _DrawerMenuItem extends ConsumerWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
@@ -227,7 +209,9 @@ class _DrawerMenuItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+
     return ListTile(
       leading: Container(
         width: 40,
@@ -240,10 +224,10 @@ class _DrawerMenuItem extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           //fontWeight: FontWeight.w500,
-          color: Color(0xFF333333),
+          color: colors.textColor,
         ),
       ),
       onTap: onTap,

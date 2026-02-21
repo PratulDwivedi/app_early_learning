@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/widgets/theme_selector.dart';
+import '../../common/widgets/custom_text_form_field.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 import '../../common/services/navigation_service.dart';
@@ -19,7 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   @override
@@ -61,26 +60,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       );
       return;
     }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('access_token', apiResponse.accessToken!);
     NavigationService.clearAndNavigate('home');
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = ref.watch(isDarkModeProvider);
     final primaryColor = ref.watch(primaryColorProvider);
-    
-    final bgColor = isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5);
-    final cardColor = isDarkMode ? const Color(0xFF2D2D2D) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final hintColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
-    final inputFillColor = isDarkMode ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
-    final inputTextColor = isDarkMode ? Colors.white : Colors.black;
+    final colors = ref.watch(themeColorsProvider);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: colors.bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -98,7 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ],
       ),
       body: Container(
-        color: bgColor,
+        color: colors.bgColor,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -110,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: cardColor,
+                      color: colors.cardColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -134,17 +123,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: textColor,
+                      color: colors.textColor,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Sign in to continue',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: hintColor,
-                    ),
+                    style: TextStyle(fontSize: 16, color: colors.hintColor),
                   ),
                   const SizedBox(height: 40),
 
@@ -152,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: cardColor,
+                      color: colors.cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -167,130 +153,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       child: Column(
                         children: [
                           // Email Field
-                          TextFormField(
+                          EmailTextFormField(
                             controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            style: TextStyle(fontSize: 16, color: inputTextColor),
-                            decoration: InputDecoration(
-                              labelText: 'Login ID',
-                              labelStyle: TextStyle(color: hintColor),
-                              hintText: 'Enter your email',
-                              hintStyle: TextStyle(color: hintColor),
-                              prefixIcon: Icon(Icons.email_outlined, color: hintColor),
-                              filled: true,
-                              fillColor: inputFillColor,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Colors.red,
-                                  width: 2,
-                                ),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Colors.red,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 18,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              return null;
-                            },
+                            colors: colors,
+                            primaryColor: primaryColor,
                           ),
                           const SizedBox(height: 20),
 
                           // Password Field
-                          TextFormField(
+                          PasswordTextFormField(
                             controller: _passwordController,
-                            obscureText: !_isPasswordVisible,
-                            style: TextStyle(fontSize: 16, color: inputTextColor),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              labelStyle: TextStyle(color: hintColor),
-                              hintText: 'Enter your password',
-                              hintStyle: TextStyle(color: hintColor),
-                              prefixIcon: Icon(Icons.lock_outline, color: hintColor),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: hintColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
-                                  });
-                                },
-                              ),
-                              filled: true,
-                              fillColor: inputFillColor,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Colors.red,
-                                  width: 2,
-                                ),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Colors.red,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 18,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
+                            colors: colors,
+                            primaryColor: primaryColor,
                           ),
                           const SizedBox(height: 16),
 
@@ -303,19 +177,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    backgroundColor: cardColor,
+                                    backgroundColor: colors.cardColor,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    title: Text('Forgot Password', style: TextStyle(color: textColor)),
+                                    title: Text(
+                                      'Forgot Password',
+                                      style: TextStyle(color: colors.textColor),
+                                    ),
                                     content: Text(
                                       'A password reset link will be sent to your email address.',
-                                      style: TextStyle(color: textColor),
+                                      style: TextStyle(color: colors.textColor),
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
-                                        child: Text('Cancel', style: TextStyle(color: primaryColor)),
+                                        child: Text(
+                                          'Cancel',
+                                          style: TextStyle(color: primaryColor),
+                                        ),
                                       ),
                                       ElevatedButton(
                                         onPressed: () {
@@ -423,7 +303,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             children: [
                               Text(
                                 'Don\'t have an account? ',
-                                style: TextStyle(color: hintColor),
+                                style: TextStyle(color: colors.hintColor),
                               ),
                               TextButton(
                                 onPressed: () {

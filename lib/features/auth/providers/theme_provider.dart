@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/theme_colors.dart';
 
 class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeNotifier() : super(const ThemeState()) {
@@ -84,4 +85,10 @@ final primaryColorProvider = Provider<Color>((ref) {
 
 final primaryColorIndexProvider = Provider<int>((ref) {
   return ref.watch(themeProvider).primaryColorIndex;
+});
+
+// All theme colors in one provider
+final themeColorsProvider = Provider<ThemeColors>((ref) {
+  final isDarkMode = ref.watch(isDarkModeProvider);
+  return isDarkMode ? ThemeColors.dark() : ThemeColors.light();
 });
