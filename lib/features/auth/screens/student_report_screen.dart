@@ -22,7 +22,7 @@ class StudentReportScreen extends ConsumerWidget {
         child: Column(
           children: [
             CommonGradientHeader(
-              title: "Student Reports",
+              title: "Kid Reports",
               onRefresh: () {
                 ref.invalidate(studentSummaryProvider);
               },

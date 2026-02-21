@@ -113,7 +113,7 @@ class _StudentPageState extends ConsumerState<StudentPage> {
           children: [
             // Gradient Header
             CommonGradientHeader(
-              title: 'Student',
+              title: 'Kid',
               onRefresh: () {
                 ref.invalidate(authInitializerProvider);
               },

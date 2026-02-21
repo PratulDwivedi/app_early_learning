@@ -151,13 +151,13 @@ class GradientHeader extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Add Student Button
+                      // Add Kid Button
                       ElevatedButton.icon(
                         onPressed: () {
                           NavigationService.navigateTo(AppPageRoute.addstudent);
                         },
                         icon: const Icon(Icons.person_add),
-                        label: const Text('Add Student'),
+                        label: const Text('Add Kid'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white.withOpacity(0.9),
                           foregroundColor: primaryColor,
