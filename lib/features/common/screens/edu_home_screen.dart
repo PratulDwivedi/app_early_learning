@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/theme_provider.dart';
 import '../widgets/app_sidebar_drawer.dart';
+import '../widgets/bottom_nav_bar.dart';
 import '../widgets/gradient_header.dart';
 import '../../auth/screens/students_list_screen.dart';
 
@@ -39,7 +40,7 @@ class EduHomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        //bottomNavigationBar: const BottomNavBar(),
+        bottomNavigationBar: const BottomNavBar(),
       ),
     );
   }

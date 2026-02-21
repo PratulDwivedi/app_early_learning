@@ -22,7 +22,23 @@ class BottomNavBar extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(
-                icon: getPageIcon('program'),
+                icon: Icons.report,
+                label: 'Reports',
+                isActive: false,
+                onTap: () {
+                  ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                    routeName: AppPageRoute.profile,
+                    name: "Reports",
+                    data: {},
+                  );
+                  NavigationService.navigateTo(
+                    screenArgsModel.routeName,
+                    arguments: screenArgsModel,
+                  );
+                },
+              ),
+               _NavItem(
+                icon: Icons.home,
                 label: 'Home',
                 isActive: true,
                 onTap: () {
@@ -38,13 +54,13 @@ class BottomNavBar extends ConsumerWidget {
                 },
               ),
               _NavItem(
-                icon: getPageIcon('faq'),
-                label: 'Help',
+                icon: Icons.people_sharp,
+                label: 'Guardians',
                 isActive: false,
                 onTap: () {
                   ScreenArgsModel screenArgsModel = ScreenArgsModel(
                     routeName: AppPageRoute.helpline,
-                    name: "Help",
+                    name: "Guardians",
                     data: {},
                   );
                   NavigationService.navigateTo(
