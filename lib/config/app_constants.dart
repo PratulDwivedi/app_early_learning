@@ -25,6 +25,7 @@ class AppPageRoute {
   static const String students = 'students';
   static const String addquestion = 'addquestion';
   static const String questions = 'questions';
+  static const String evaluation = 'evaluation';
   static const String changePassword = 'changePassword';
   static const String helpline = 'helpline';
   static const String feedback = 'feedback';

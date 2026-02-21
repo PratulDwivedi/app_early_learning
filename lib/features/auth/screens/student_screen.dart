@@ -127,17 +127,6 @@ class _StudentPageState extends ConsumerState<StudentPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title Section
-                    Text(
-                      'Student Information',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
                     // Form Fields Container
                     Container(
                       padding: const EdgeInsets.all(20),

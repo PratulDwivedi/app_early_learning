@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer' as developer;
 import '../../common/widgets/custom_text_form_field.dart';
+import '../../common/widgets/custom_dropdown_form_field.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../providers/theme_provider.dart';
@@ -166,45 +167,19 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                       child: Column(
                         children: [
                           // Question Mode Dropdown
-                          DropdownButtonFormField<String>(
+                          CustomDropdownFormField<String>(
+                            isExpanded: true,
                             value: _questionMode,
-                            decoration: InputDecoration(
-                              labelText: 'Question Mode',
-                              labelStyle: TextStyle(color: colors.hintColor),
-                              prefixIcon: Icon(
-                                Icons.category_outlined,
-                                color: colors.hintColor,
-                              ),
-                              filled: true,
-                              fillColor: colors.inputFillColor,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 18,
-                              ),
+                            labelText: 'Question Mode',
+                            prefixIcon: Icon(
+                              Icons.category_outlined,
+                              color: colors.hintColor,
                             ),
-                            items: _questionModes
-                                .map(
-                                  (mode) => DropdownMenuItem(
-                                    value: mode,
-                                    child: Text(mode),
-                                  ),
-                                )
-                                .toList(),
+                            fillColor: colors.inputFillColor,
+                            hintColor: colors.hintColor,
+                            primaryColor: primaryColor,
+                            items: _questionModes,
+                            itemLabel: (mode) => mode,
                             onChanged: (value) {
                               if (value != null) {
                                 setState(() => _questionMode = value);

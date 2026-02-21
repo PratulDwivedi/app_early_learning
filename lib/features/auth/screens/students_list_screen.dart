@@ -1,9 +1,10 @@
-import 'package:app_early_learning/features/common/widgets/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
+import '../../common/services/navigation_service.dart';
 import '../providers/theme_provider.dart';
 import '../../common/providers/student_provider.dart';
+import '../../../config/app_constants.dart';
 
 class StudentsListScreen extends ConsumerWidget {
   const StudentsListScreen({super.key});
@@ -243,7 +244,7 @@ class StudentsListView extends ConsumerWidget {
                                     children: [
                                       Icon(Icons.edit),
                                       SizedBox(width: 8),
-                                      Text('Edit'),
+                                      Text('View / Edit'),
                                     ],
                                   ),
                                   onTap: () {
@@ -253,16 +254,16 @@ class StudentsListView extends ConsumerWidget {
                                 PopupMenuItem(
                                   child: const Row(
                                     children: [
-                                      Icon(Icons.delete, color: Colors.red),
+                                      Icon(Icons.question_answer, color: Colors.red),
                                       SizedBox(width: 8),
                                       Text(
-                                        'Delete',
+                                        'Evaluate',
                                         style: TextStyle(color: Colors.red),
                                       ),
                                     ],
                                   ),
                                   onTap: () {
-                                    // TODO: Implement delete student
+                                    NavigationService.navigateTo(AppPageRoute.evaluation);
                                   },
                                 ),
                               ],
