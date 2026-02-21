@@ -10,8 +10,8 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    final primaryColorIndex = prefs.getInt('primaryColorIndex') ?? 0;
+    final isDarkMode = prefs.getBool('isDarkMode') ?? true; // Default: Dark mode
+    final primaryColorIndex = prefs.getInt('primaryColorIndex') ?? 3; // Default: Orange (index 3)
 
     state = state.copyWith(
       isDarkMode: isDarkMode,
@@ -53,8 +53,8 @@ class ThemeState {
   final int primaryColorIndex;
 
   const ThemeState({
-    this.isDarkMode = false,
-    this.primaryColorIndex = 0,
+    this.isDarkMode = false, // Default: Light mode
+    this.primaryColorIndex = 3, // Default: Orange (index 3)
   });
 
   ThemeState copyWith({
