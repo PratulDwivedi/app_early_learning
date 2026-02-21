@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
+import '../../common/widgets/custom_button.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 import '../../common/services/navigation_service.dart';
@@ -204,60 +205,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                           const SizedBox(height: 24),
 
                           // Sign Up Button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _handleSignup,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      primaryColor.withOpacity(0.8),
-                                      primaryColor,
-                                      primaryColor.withOpacity(0.6),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: primaryColor.withOpacity(0.4),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 3,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Sign Up',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
+                          CustomPrimaryButton(
+                            label: 'Sign Up',
+                            onPressed: _handleSignup,
+                            isLoading: _isLoading,
+                            primaryColor: primaryColor,
                           ),
                           const SizedBox(height: 16),
 

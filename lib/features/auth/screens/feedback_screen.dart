@@ -35,7 +35,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             CommonGradientHeader(
               title: widget.args.name,
               onRefresh: () {
-                ref.read(authProvider.notifier).loadUser();
+                // Refresh user data by invalidating auth initializer
+                ref.invalidate(authInitializerProvider);
               },
             ),
             Padding(

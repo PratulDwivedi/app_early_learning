@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/theme_provider.dart';
 import '../widgets/app_sidebar_drawer.dart';
 import '../widgets/feature_grid.dart';
 import '../widgets/gradient_header.dart';
@@ -9,8 +10,10 @@ class EduHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+
     return Container(
-      color: Color(0xFF4CAF50), // Dark background
+      color: colors.bgColor,
       child: Scaffold(
         drawer: const AppSidebarDrawer(),
         backgroundColor: Colors.transparent,

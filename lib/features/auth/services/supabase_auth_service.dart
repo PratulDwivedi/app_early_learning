@@ -42,7 +42,8 @@ class SupabaseAuthService implements AuthService {
       'email': email,
       'password': password,
     });
-
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('access_token', authResponse.accessToken!);
     // If signin succeeded, fetch profile and cache it locally
     if (authResponse.accessToken!.isNotEmpty) {
       try {
@@ -52,10 +53,8 @@ class SupabaseAuthService implements AuthService {
         );
 
         if (profileResponse.isSuccess) {
-          final prefs = await SharedPreferences.getInstance();
           // store the first item from response.data as user_profile
           if (profileResponse.data.isNotEmpty) {
-            await prefs.setString('access_token', authResponse.accessToken!);
             await prefs.setString('refresh_token', authResponse.refreshToken!);
             await prefs.setString(
               'user_profile',

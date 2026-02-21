@@ -6,6 +6,7 @@ import '../models/screen_args_model.dart';
 import '../services/navigation_service.dart';
 import '../../auth/providers/auth_service_provider.dart';
 import '../../auth/providers/theme_provider.dart';
+import 'custom_button.dart';
 
 class AppSidebarDrawer extends ConsumerWidget {
   const AppSidebarDrawer({super.key});
@@ -163,29 +164,28 @@ class AppSidebarDrawer extends ConsumerWidget {
           style: TextStyle(color: colors.textColor),
         ),
         actions: [
-          TextButton(
+          CustomTextButton(
+            label: 'Cancel',
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: primaryColor)),
+            textColor: primaryColor,
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              Navigator.pop(context); // Close drawer
-              // Perform logout
-              final authService = ref.read(authServiceProvider);
-              await authService.signOut();
-              NavigationService.navigateTo(
-                'login',
-                arguments: {'isHome': false},
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+          SizedBox(
+            width: 120,
+            height: 40,
+            child: CustomPrimaryButton(
+              label: 'Logout',
+              onPressed: () async {
+                Navigator.pop(context);
+                Navigator.pop(context); // Close drawer
+                // Perform logout
+                final authService = ref.read(authServiceProvider);
+                await authService.signOut();
+                NavigationService.clearAndNavigate('login');
+              },
+              primaryColor: primaryColor,
+              height: 40,
+              width: 120,
             ),
-            child: const Text('Logout'),
           ),
         ],
       ),

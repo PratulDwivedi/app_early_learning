@@ -3,21 +3,35 @@ import '../../common/models/response_message_model.dart';
 import '../models/current_user.dart';
 import '../services/auth_service.dart';
 
+/// 🔐 Initialize auth on app start - loads user from SharedPreferences
+final authInitializerProvider = FutureProvider<CurrentUser?>((ref) async {
+  final service = ref.watch(authServiceProvider);
+  final user = await service.getCurrentUser();
+  // Update auth state when user is loaded
+  if (user != null) {
+    ref.read(authProvider.notifier).setUser(user);
+  }
+  return user;
+});
+
 /// 🔐 Auth State = CurrentUser (NOT Supabase)
 final authProvider = StateNotifierProvider<AuthNotifier, CurrentUser?>(
   (ref) => AuthNotifier(ref),
 );
 
 class AuthNotifier extends StateNotifier<CurrentUser?> {
-  AuthNotifier(this.ref) : super(null) {
-    loadUser();
-  }
+  AuthNotifier(this.ref) : super(null);
 
   final Ref ref;
 
-  /// Load user from SharedPreferences on app start
-  Future<void> loadUser() async {
-    state = await ref.read(authServiceProvider).getCurrentUser();
+  /// Update user state after successful login
+  void setUser(CurrentUser? user) {
+    state = user;
+  }
+
+  /// Clear user state on logout
+  void clearUser() {
+    state = null;
   }
 }
 

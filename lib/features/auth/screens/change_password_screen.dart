@@ -39,7 +39,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             CommonGradientHeader(
               title: widget.args.name,
               onRefresh: () {
-                ref.read(authProvider.notifier).loadUser();
+                // Refresh user data by invalidating auth initializer
+                ref.invalidate(authInitializerProvider);
               },
             ),
             Padding(

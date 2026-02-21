@@ -10,15 +10,27 @@ class AuthWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Wait for auth initialization to complete
+    final authInitAsync = ref.watch(authInitializerProvider);
     final currentUser = ref.watch(authProvider);
 
-    // User is logged in
-    if (currentUser != null) {
-      return EduHomeScreen();
-    }
+    return authInitAsync.when(
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, stack) => const LoginScreen(),
+      data: (user) {
+        // User is logged in
+        if (currentUser != null) {
+          return const EduHomeScreen();
+        }
 
-    // User is logged out
-    return const LoginScreen();
+        // User is logged out
+        return const LoginScreen();
+      },
+    );
   }
 }
 

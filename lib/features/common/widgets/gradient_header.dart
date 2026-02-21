@@ -1,32 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_service_provider.dart';
-import '../providers/event_service_provider.dart';
+import '../../auth/providers/theme_provider.dart';
+import 'theme_selector.dart';
 
 class GradientHeader extends ConsumerWidget {
   const GradientHeader({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(summaryCountProvider);
     final currentUser = ref.watch(authProvider);
-
-    // Extract notification count from summary data
-    int notificationCount = 0;
-    if (summaryAsync.hasValue && summaryAsync.value!.isSuccess) {
-      final stats = summaryAsync.value!.firstOrNull ?? {};
-      notificationCount = (stats['notifications'] as int?) ?? 0;
-    }
+    final primaryColor = ref.watch(primaryColorProvider);
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF8BC34A), // Light Green
-            Color(0xFF4CAF50), // Main Green
-            Color(0xFF2E7D32), // Deep Green
+            primaryColor.withOpacity(0.6),
+            primaryColor,
+            primaryColor.withOpacity(0.8),
           ],
         ),
       ),
@@ -78,53 +72,28 @@ class GradientHeader extends ConsumerWidget {
                     ),
                     Row(
                       children: [
-                        Stack(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                // Navigate to notifications
-                              },
-                              icon: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.2),
-                              ),
-                            ),
-                            if (notificationCount > 0)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  child: Text(
-                                    '$notificationCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        IconButton(
+                          onPressed: () {
+                            // Refresh action
+                          },
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: () {
-                            ref.invalidate(summaryCountProvider);
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => const ThemeSelector(),
+                            );
                           },
-                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          icon: const Icon(
+                            Icons.color_lens,
+                            color: Colors.white,
+                          ),
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.white.withOpacity(0.2),
                           ),
@@ -166,64 +135,39 @@ class GradientHeader extends ConsumerWidget {
                       const SizedBox(height: 40),
                     ],
                   ),
-                summaryAsync.when(
-                  loading: () => const SizedBox(
-                    height: 120,
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  ),
-
-                  error: (err, _) => SizedBox(
-                    height: 120,
-                    child: Center(
-                      child: Text(
-                        err.toString(),
-                        style: const TextStyle(color: Colors.white),
+                if (currentUser != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Add Student Button
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to add student screen
+                        },
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Student'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.9),
+                          foregroundColor: primaryColor,
+                        ),
                       ),
-                    ),
+                      // Question Paper Button
+                      currentUser.data.isAdmin == true
+                          ? ElevatedButton.icon(
+                              onPressed: () {
+                                // Navigate to question paper screen
+                              },
+                              icon: const Icon(Icons.description),
+                              label: const Text('Question Paper'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.9),
+                                foregroundColor: primaryColor,
+                              ),
+                            )
+                          : const SizedBox(),
+                    ],
                   ),
-
-                  data: (response) {
-                    // ❌ API returned failure
-                    if (!response.isSuccess) {
-                      return SizedBox(
-                        height: 120,
-                        child: Center(
-                          child: Text(
-                            response.message,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      );
-                    }
-
-                    // ✅ Safe extraction
-                    final stats =
-                        response.firstOrNull ??
-                        {'delegates': 0, 'speakers': 0, 'exhibitors': 0};
-
-                    final eventName = stats['event_name']?.toString() ?? '';
-
-                    return Column(
-                      children: [
-                        const SizedBox(height: 20),
-
-                        // 🏷 Event Name
-                        Text(
-                          eventName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 40),
-                      ],
-                    );
-                  },
-                ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
