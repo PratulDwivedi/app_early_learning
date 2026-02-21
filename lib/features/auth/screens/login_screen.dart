@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_assets.dart';
 import '../../common/services/app_snackbar_service.dart';
+import '../../common/widgets/asset_image.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
@@ -25,9 +27,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void initState() {
     super.initState();
-
-    // _emailController.text = "admin@earlylearning.com";
-    // _passwordController.text = "Admin@123";
+    _emailController.text = "admin@earlylearning.com";
+    _passwordController.text = "Admin@123";
   }
 
   @override
@@ -114,10 +115,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.memory_rounded,
-                      size: 60,
-                      color: primaryColor,
+                    child: AppImage(
+                      AppAssets.logo,
+                      width: 60,
+                      height: 60,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   const SizedBox(height: 30),

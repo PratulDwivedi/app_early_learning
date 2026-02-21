@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_assets.dart';
 import '../../common/services/app_snackbar_service.dart';
+import '../../common/widgets/asset_image.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
@@ -44,11 +46,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     setState(() => _isLoading = true);
 
     try {
-      final apiResponse = await ref.read(signUpProvider({
-        'userName': _userNameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-      }).future);
+      final apiResponse = await ref.read(
+        signUpProvider({
+          'userName': _userNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+        }).future,
+      );
 
       if (!mounted) return;
 
@@ -64,7 +68,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
         NavigationService.clearAndNavigate('login');
       } else {
         AppSnackbarService.error(
-          apiResponse.message.isEmpty ? 'Signup failed. Please try again.' : apiResponse.message,
+          apiResponse.message.isEmpty
+              ? 'Signup failed. Please try again.'
+              : apiResponse.message,
         );
       }
     } catch (e) {
@@ -125,10 +131,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.memory_rounded,
-                      size: 60,
-                      color: primaryColor,
+                    child: AppImage(
+                      AppAssets.logo,
+                      width: 60,
+                      height: 60,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -146,10 +153,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                   const SizedBox(height: 8),
                   Text(
                     'Join Early Learning Today',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: colors.hintColor,
-                    ),
+                    style: TextStyle(fontSize: 16, color: colors.hintColor),
                   ),
                   const SizedBox(height: 40),
 
