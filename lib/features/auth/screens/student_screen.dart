@@ -11,14 +11,14 @@ import '../providers/auth_service_provider.dart';
 import '../../common/providers/student_provider.dart';
 import '../../common/models/student_model.dart';
 
-class AddStudentPage extends ConsumerStatefulWidget {
-  const AddStudentPage({super.key});
+class StudentPage extends ConsumerStatefulWidget {
+  const StudentPage({super.key});
 
   @override
-  ConsumerState<AddStudentPage> createState() => _AddStudentPageState();
+  ConsumerState<StudentPage> createState() => _StudentPageState();
 }
 
-class _AddStudentPageState extends ConsumerState<AddStudentPage> {
+class _StudentPageState extends ConsumerState<StudentPage> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();

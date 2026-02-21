@@ -164,14 +164,14 @@ class GradientHeader extends ConsumerWidget {
                         ),
                       ),
                       // (Removed "View Students" button - students list is shown on home screen)
-                      // Question Paper Button
+                      // Add Question Button
                       currentUser.data.isAdmin == true
                           ? ElevatedButton.icon(
                               onPressed: () {
-                                // Navigate to question paper screen
+                                NavigationService.navigateTo(AppPageRoute.addquestion);
                               },
-                              icon: const Icon(Icons.description),
-                              label: const Text('Question Paper'),
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: const Text('Add Question'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.9),
                                 foregroundColor: primaryColor,

@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import '../../../config/app_constants.dart';
 import '../models/response_message_model.dart';
 import '../models/student_model.dart';
+import '../models/question_model.dart';
 import 'supabase_api_helper.dart';
 import 'edu_service.dart';
 
@@ -57,6 +58,36 @@ class SupabaseEduService implements EduService {
   @override
   Future<ResponseMessageModel> getStudents() async {
     final response = await SupabaseApiHelper.post(ApiRoutes.getStudents, null);
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> saveQuestion(Question question) async {
+    developer.log(
+      'saveQuestion called with: questionText=${question.questionText}, questionMode=${question.questionMode}, difficulty=${question.difficulty}',
+      name: 'QuestionService',
+    );
+
+    final payload = question.toJson();
+
+    developer.log(
+      'API Payload: $payload',
+      name: 'QuestionService',
+    );
+
+    final response = await SupabaseApiHelper.post(ApiRoutes.addquestion, payload);
+
+    developer.log(
+      'API Response: isSuccess=${response.isSuccess}, message=${response.message}, statusCode=${response.statusCode}',
+      name: 'QuestionService',
+    );
+
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> getQuestions() async {
+    final response = await SupabaseApiHelper.post(ApiRoutes.getQuestions, null);
     return response;
   }
 }
