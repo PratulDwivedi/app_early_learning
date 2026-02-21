@@ -1,5 +1,34 @@
 # App Early Learning
 
+An interactive Flutter-based early learning platform for students featuring student management, quiz evaluations, and text-to-speech accessibility features.
+
+## Quick Start
+
+```bash
+# Development build
+flutter run
+
+# Production APK build
+flutter build apk --release
+
+# Production AAB (Google Play)
+flutter build appbundle --release
+```
+
+## Production Build (Android Signing)
+
+See [QUICK_START_SIGNING.md](QUICK_START_SIGNING.md) for 2-minute setup.
+
+For detailed setup guide: [ANDROID_SIGNING_GUIDE.md](ANDROID_SIGNING_GUIDE.md)
+
+**Quick steps:**
+1. Run: `chmod +x setup_keystore.sh && ./setup_keystore.sh`
+2. Build: `flutter build apk --release`
+
+---
+
+# Technical Documentation
+
 
 
 

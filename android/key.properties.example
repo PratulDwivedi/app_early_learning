@@ -1,0 +1,9 @@
+# Key.properties file for Android app signing
+# IMPORTANT: Keep this file secure and never commit to version control!
+# Add this to .gitignore
+
+# Keystore configuration
+storeFile=keystore/app_early_learning.jks
+storePassword=your_keystore_password_here
+keyAlias=app_early_learning_key
+keyPassword=your_key_password_here
