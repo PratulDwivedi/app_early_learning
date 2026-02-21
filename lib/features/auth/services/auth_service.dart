@@ -17,6 +17,12 @@ abstract class AuthService {
 
   Future<CurrentUser?> getCurrentUser();
 
+  Future<ResponseMessageModel> signUp({
+    required String userName,
+    required String email,
+    required String password,
+  });
+
   Future<AuthResponseModel> signIn({
     required String email,
     required String password,

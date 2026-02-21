@@ -58,6 +58,19 @@ final updatePasswordProvider =
       );
     });
 
+final signUpProvider =
+    FutureProvider.family<ResponseMessageModel, Map<String, String>>((
+      ref,
+      payload,
+    ) async {
+      final service = ref.watch(authServiceProvider);
+      return await service.signUp(
+        userName: payload['userName']!,
+        email: payload['email']!,
+        password: payload['password']!,
+      );
+    });
+
 final submitFeedbackProvider =
     FutureProvider.family<ResponseMessageModel, String>((ref, feedback) async {
       final service = ref.watch(authServiceProvider);

@@ -2,6 +2,7 @@ import 'package:app_early_learning/features/auth/screens/feedback_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_constants.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../auth/screens/signup_screen.dart';
 import '../screens/edu_home_screen.dart';
 import '../models/screen_args_model.dart';
 import '../../auth/screens/change_password_screen.dart';
@@ -13,6 +14,7 @@ class NavigationService {
 
   static final Map<String, WidgetBuilder> _routes = {
     'login': (context) => const LoginScreen(),
+    'signup': (context) => const SignupScreen(),
     'home': (context) => const EduHomeScreen(),
   };
 
@@ -76,5 +78,13 @@ class NavigationService {
       (route) => false,
       arguments: arguments,
     );
+  }
+
+  static void navigate(String routeName, {Object? arguments}) {
+    navigateTo(routeName, arguments: arguments);
+  }
+
+  static void goBack() {
+    navigatorKey.currentState?.pop();
   }
 }

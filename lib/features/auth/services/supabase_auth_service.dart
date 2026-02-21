@@ -19,6 +19,21 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
+  Future<ResponseMessageModel> signUp({
+    required String userName,
+    required String email,
+    required String password,
+  }) async {
+    final response = await SupabaseApiHelper.postEdg(ApiRoutes.signUp, {
+      'user_name': userName,
+      'email': email,
+      'password': password,
+    });
+
+    return response;
+  }
+
+  @override
   Future<AuthResponseModel> signIn({
     required String email,
     required String password,
