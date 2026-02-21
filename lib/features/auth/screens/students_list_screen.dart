@@ -31,11 +31,36 @@ class StudentsListScreen extends ConsumerWidget {
 }
 
 // Reusable students list view (can be embedded in home screen)
-class StudentsListView extends ConsumerWidget {
+class StudentsListView extends ConsumerStatefulWidget {
   const StudentsListView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudentsListView> createState() => _StudentsListViewState();
+}
+
+class _StudentsListViewState extends ConsumerState<StudentsListView> {
+  late TextEditingController _searchController;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
     final studentsAsync = ref.watch(getStudentsProvider);
@@ -45,8 +70,9 @@ class StudentsListView extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // search textbox with full wdith
+          // search textbox with full width
           TextFormField(
+            controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Search students...',
               prefixIcon: const Icon(Icons.search),
@@ -130,14 +156,54 @@ class StudentsListView extends ConsumerWidget {
                 );
               }
 
+              // Filter students based on search query
+              final filteredStudents = response.data.where((student) {
+                final firstName = (student['first_name'] ?? '').toLowerCase();
+                final lastName = (student['last_name'] ?? '').toLowerCase();
+                final email = (student['email'] ?? '').toLowerCase();
+                return firstName.contains(_searchQuery) ||
+                    lastName.contains(_searchQuery) ||
+                    email.contains(_searchQuery);
+              }).toList();
+
+              // Show no results message if search has results but all filtered out
+              if (filteredStudents.isEmpty && _searchQuery.isNotEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colors.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.person_search, color: primaryColor, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No Students Match',
+                        style: TextStyle(
+                          color: colors.textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try a different search term',
+                        style: TextStyle(color: colors.hintColor, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               return Column(
                 children: [
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: response.data.length,
+                    itemCount: filteredStudents.length,
                     itemBuilder: (context, index) {
-                      final student = response.data[index];
+                      final student = filteredStudents[index];
                       final firstName = student['first_name'] ?? 'Unknown';
                       final lastName = student['last_name'] ?? '';
                       final grade = student['grade'] ?? '-';
