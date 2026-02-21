@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_service_provider.dart';
 import '../../auth/providers/theme_provider.dart';
+import '../../../config/app_constants.dart';
+import '../services/navigation_service.dart';
 import 'theme_selector.dart';
 
 class GradientHeader extends ConsumerWidget {
@@ -152,7 +154,7 @@ class GradientHeader extends ConsumerWidget {
                       // Add Student Button
                       ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate to add student screen
+                          NavigationService.navigateTo(AppPageRoute.addstudent);
                         },
                         icon: const Icon(Icons.person_add),
                         label: const Text('Add Student'),

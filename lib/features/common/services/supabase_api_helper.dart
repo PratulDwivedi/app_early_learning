@@ -66,12 +66,9 @@ class SupabaseApiHelper {
 
     String functionName = route.trim().split('.').last;
 
+    final body = jsonEncode(data ?? {});
     Uri uri = Uri.parse('${appConfig.apiBaseUrl}/rest/v1/rpc/$functionName');
-    final response = await http.post(
-      uri,
-      headers: headers,
-      body: jsonEncode(data),
-    );
+    final response = await http.post(uri, headers: headers, body: body);
     return ResponseMessageModel.fromJson(jsonDecode(response.body));
   }
 

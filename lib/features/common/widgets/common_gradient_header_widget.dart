@@ -1,23 +1,33 @@
 // lib/widgets/common_gradient_header.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/theme_provider.dart';
 
-class CommonGradientHeader extends StatelessWidget {
+class CommonGradientHeader extends ConsumerWidget {
   final String title;
   final VoidCallback? onRefresh;
   final Widget? actionButton;
-  const CommonGradientHeader({super.key, required this.title, this.onRefresh, this.actionButton});
+  
+  const CommonGradientHeader({
+    super.key,
+    required this.title,
+    this.onRefresh,
+    this.actionButton,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final primaryColor = ref.watch(primaryColorProvider);
+
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF8BC34A), // Light Green
-            Color(0xFF4CAF50), // Main Green
-            Color(0xFF2E7D32), // Deep Green
+            primaryColor.withOpacity(0.6),
+            primaryColor,
+            primaryColor.withOpacity(0.8),
           ],
         ),
       ),

@@ -13,6 +13,8 @@ class CustomTextFormField extends StatelessWidget {
   final ValidatorCallback? validator;
   final TextInputType keyboardType;
   final int maxLines;
+  final ValueChanged<String>? onChanged;
+  final bool readOnly;
 
   const CustomTextFormField({
     Key? key,
@@ -25,6 +27,8 @@ class CustomTextFormField extends StatelessWidget {
     this.validator,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
+    this.onChanged,
+    this.readOnly = false,
   }) : super(key: key);
 
   @override
@@ -33,6 +37,8 @@ class CustomTextFormField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      readOnly: readOnly,
+      onChanged: onChanged,
       style: TextStyle(fontSize: 16, color: colors.inputTextColor),
       decoration: InputDecoration(
         labelText: labelText,

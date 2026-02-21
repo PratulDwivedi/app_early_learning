@@ -30,10 +30,10 @@ class AppConfig {
 
 const Map<String, AppConfig> configs = {
   "dev-supabase": AppConfig(
-    appName: 'Tech Techi',
+    appName: 'Easy Learning',
     appVersion: '0.0.1',
     buildDate: '2024-06-14',
-    webSiteUrl: 'https://tech-techi.com',
+    webSiteUrl: 'https://EasyLearning.com',
     apiBaseUrl: 'https://tpgyuqvncljnuyrohqre.supabase.co',
     storageUrl:
         'https://tpgyuqvncljnuyrohqre.supabase.co/storage/v1/object/public/private_files/1d40edf7-7af6-411d-b85a-0428bfe7bafc',
