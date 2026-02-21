@@ -112,6 +112,15 @@ class AppSidebarDrawer extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
                   _DrawerMenuItem(
+                    icon: Icons.volume_up_rounded,
+                    iconColor: const Color(0xFF4CAF50),
+                    title: 'Speech Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      NavigationService.navigateTo(AppPageRoute.speechSettings);
+                    },
+                  ),
+                  _DrawerMenuItem(
                     icon: Icons.password,
                     iconColor: const Color(0xFFFF6B6B),
                     title: 'Change Password',

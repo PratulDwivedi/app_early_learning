@@ -3,6 +3,7 @@ import 'package:app_early_learning/features/auth/screens/student_screen.dart';
 import 'package:app_early_learning/features/auth/screens/students_list_screen.dart';
 import 'package:app_early_learning/features/auth/screens/question_screen.dart';
 import 'package:app_early_learning/features/auth/screens/evaluation_screen.dart';
+import 'package:app_early_learning/features/auth/screens/speech_settings_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_constants.dart';
 import '../../auth/screens/login_screen.dart';
@@ -75,6 +76,13 @@ class NavigationService {
           navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const EvaluationScreen(),
+            ),
+          );
+          break;
+        case AppPageRoute.speechSettings:
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const SpeechSettingsScreen(),
             ),
           );
           break;
