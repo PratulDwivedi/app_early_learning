@@ -5,7 +5,6 @@ class CurrentUser {
   final String email;
   final String fullName;
   final int tenantId;
-  final String userName;
   final String tenantName;
 
   CurrentUser({
@@ -15,7 +14,6 @@ class CurrentUser {
     required this.email,
     required this.fullName,
     required this.tenantId,
-    required this.userName,
     required this.tenantName,
   });
 
@@ -27,7 +25,6 @@ class CurrentUser {
       email: json['email'],
       fullName: json['full_name'],
       tenantId: json['tenant_id'],
-      userName: json['user_name'],
       tenantName: json['tenant_name'],
     );
   }
