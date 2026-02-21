@@ -5,6 +5,7 @@ class ApiRoutes {
   static const String signUp = 'edu-guardian-signup';
   static const String profile = 'public.fn_get_profile';
   static const String addstudent = 'edu.fn_save_student';
+  static const String getStudents = 'edu.fn_get_students';
   static const String updatePassword = 'edu.fn_update_delegate_password';
   static const String updateProfilePic = 'edu.fn_update_delegate_profile_pic';
   static const String uploadFile = 'edu/v1/upload-file';
@@ -19,6 +20,7 @@ class AppPageRoute {
   static const String signIn = 'signIn';
   static const String profile = 'profile';
   static const String addstudent = 'addstudent';
+  static const String students = 'students';
   static const String changePassword = 'changePassword';
   static const String helpline = 'helpline';
   static const String feedback = 'feedback';

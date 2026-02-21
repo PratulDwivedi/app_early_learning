@@ -31,4 +31,10 @@ class SupabaseEduService implements EduService {
     });
     return response;
   }
+
+  @override
+  Future<ResponseMessageModel> getStudents() async {
+    final response = await SupabaseApiHelper.post(ApiRoutes.getStudents, null);
+    return response;
+  }
 }

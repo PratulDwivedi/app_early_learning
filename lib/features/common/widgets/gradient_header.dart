@@ -163,6 +163,7 @@ class GradientHeader extends ConsumerWidget {
                           foregroundColor: primaryColor,
                         ),
                       ),
+                      // (Removed "View Students" button - students list is shown on home screen)
                       // Question Paper Button
                       currentUser.data.isAdmin == true
                           ? ElevatedButton.icon(

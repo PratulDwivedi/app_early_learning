@@ -15,4 +15,5 @@ abstract class EduService {
   Future<ResponseMessageModel> getSummaryCount();
   Future<ResponseMessageModel> getHtmlContent(int pageId);
   Future<ResponseMessageModel> saveStudent(Student student);
+  Future<ResponseMessageModel> getStudents();
 }

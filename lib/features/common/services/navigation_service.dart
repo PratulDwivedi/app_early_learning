@@ -1,5 +1,6 @@
 import 'package:app_early_learning/features/auth/screens/feedback_screen.dart';
 import 'package:app_early_learning/features/auth/screens/add_student_screen.dart';
+import 'package:app_early_learning/features/auth/screens/students_list_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_constants.dart';
 import '../../auth/screens/login_screen.dart';
@@ -58,6 +59,13 @@ class NavigationService {
           navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const AddStudentPage(),
+            ),
+          );
+          break;
+        case AppPageRoute.students:
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const StudentsListScreen(),
             ),
           );
           break;

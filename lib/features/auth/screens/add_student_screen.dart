@@ -100,7 +100,7 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
           children: [
             // Gradient Header
             CommonGradientHeader(
-              title: 'Add New Student',
+              title: 'Student',
               onRefresh: () {
                 ref.invalidate(authInitializerProvider);
               },
@@ -292,7 +292,7 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
 
                     // Submit Button
                     CustomPrimaryButton(
-                      label: _isLoading ? 'Adding Student...' : 'Add Student',
+                      label: _isLoading ? 'Saving Student...' : 'Save Student',
                       onPressed: _isLoading ? null : _submitForm,
                       isLoading: _isLoading,
                       primaryColor: primaryColor,

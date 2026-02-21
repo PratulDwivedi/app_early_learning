@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/theme_provider.dart';
 import '../widgets/app_sidebar_drawer.dart';
-import '../widgets/feature_grid.dart';
 import '../widgets/gradient_header.dart';
+import '../../auth/screens/students_list_screen.dart';
 
 class EduHomeScreen extends ConsumerWidget {
   const EduHomeScreen({super.key});
@@ -29,7 +29,8 @@ class EduHomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 20),
-                        const FeatureGrid(),
+                          // Students list (embedded)
+                          const StudentsListView(),
                       ],
                     ),
                   ),

@@ -17,6 +17,14 @@ final saveStudentProvider = FutureProvider.autoDispose
   },
 );
 
+// Students List Provider - with autoDispose for fresh data
+final getStudentsProvider = FutureProvider.autoDispose<ResponseMessageModel>(
+  (ref) async {
+    final service = ref.watch(eduServiceProvider);
+    return service.getStudents();
+  },
+);
+
 // Student Form State Notifier
 class StudentFormNotifier extends StateNotifier<Student> {
   StudentFormNotifier()
