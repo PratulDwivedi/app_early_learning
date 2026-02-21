@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:developer' as developer;
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
@@ -8,6 +9,7 @@ import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
 import '../providers/auth_service_provider.dart';
 import '../../common/providers/student_provider.dart';
+import '../../common/models/student_model.dart';
 
 class AddStudentPage extends ConsumerStatefulWidget {
   const AddStudentPage({super.key});
@@ -54,12 +56,23 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
     setState(() => _isLoading = true);
 
     try {
-      final student = ref.read(studentFormProvider);
-
-      // Call the API
-      final result = await ref.read(
-        saveStudentProvider(student).future,
+      // Build Student directly from form controllers (simplest approach)
+      final grade = int.tryParse(_gradeController.text);
+      final student = Student(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        grade: grade,
+        dob: _dobController.text.isNotEmpty ? _dobController.text : null,
       );
+
+      developer.log(
+        'Submitting Student: firstName=${student.firstName}, lastName=${student.lastName}, grade=${student.grade}, dob=${student.dob}',
+        name: 'AddStudentForm',
+      );
+
+      // Call the API directly via service
+      final service = ref.read(eduServiceProvider);
+      final result = await service.saveStudent(student);
 
       if (mounted) {
         if (result.isSuccess) {
@@ -69,18 +82,18 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
           _lastNameController.clear();
           _gradeController.clear();
           _dobController.clear();
+          // Invalidate students list so UI refreshes
+          ref.invalidate(getStudentsProvider);
           NavigationService.goBack();
         } else {
           AppSnackbarService.error(result.message);
-          // Invalidate cache so next attempt gets fresh response
-          ref.invalidate(saveStudentProvider);
         }
       }
     } catch (e) {
       if (mounted) {
         AppSnackbarService.error('Error: ${e.toString()}');
-        // Invalidate cache so next attempt gets fresh response
-        ref.invalidate(saveStudentProvider);
+        // Ensure students list is invalidated for fresh refetch next time
+        ref.invalidate(getStudentsProvider);
       }
     } finally {
       if (mounted) {
@@ -150,11 +163,6 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
                             colors: colors,
                             primaryColor: primaryColor,
                             keyboardType: TextInputType.text,
-                            onChanged: (value) {
-                              ref
-                                  .read(studentFormProvider.notifier)
-                                  .updateFirstName(value);
-                            },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'First name is required';
@@ -176,11 +184,6 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
                             colors: colors,
                             primaryColor: primaryColor,
                             keyboardType: TextInputType.text,
-                            onChanged: (value) {
-                              ref
-                                  .read(studentFormProvider.notifier)
-                                  .updateLastName(value);
-                            },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Last name is required';
@@ -202,12 +205,6 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
                             colors: colors,
                             primaryColor: primaryColor,
                             keyboardType: TextInputType.number,
-                            onChanged: (value) {
-                              final grade = int.tryParse(value);
-                              ref
-                                  .read(studentFormProvider.notifier)
-                                  .updateGrade(grade);
-                            },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Grade is required';
@@ -292,7 +289,7 @@ class _AddStudentPageState extends ConsumerState<AddStudentPage> {
 
                     // Submit Button
                     CustomPrimaryButton(
-                      label: _isLoading ? 'Saving Student...' : 'Save Student',
+                      label: _isLoading ? 'Saving...' : 'Save',
                       onPressed: _isLoading ? null : _submitForm,
                       isLoading: _isLoading,
                       primaryColor: primaryColor,

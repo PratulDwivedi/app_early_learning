@@ -1,3 +1,4 @@
+import 'package:app_early_learning/features/common/widgets/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
@@ -38,18 +39,28 @@ class StudentsListView extends ConsumerWidget {
     final studentsAsync = ref.watch(getStudentsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Student List',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.textColor,
+          // search textbox with full wdith
+          TextFormField(
+            decoration: InputDecoration(
+              hintText: 'Search students...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: colors.cardColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 0,
+              ),
             ),
           ),
+
           const SizedBox(height: 24),
           studentsAsync.when(
             loading: () => Container(
@@ -58,9 +69,7 @@ class StudentsListView extends ConsumerWidget {
                 color: colors.cardColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
             error: (error, stack) => Container(
               padding: const EdgeInsets.all(20),
@@ -71,11 +80,7 @@ class StudentsListView extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 40,
-                  ),
+                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
                   const SizedBox(height: 12),
                   Text(
                     'Error loading students',
@@ -87,18 +92,13 @@ class StudentsListView extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     error.toString(),
-                    style: TextStyle(
-                      color: colors.hintColor,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: colors.hintColor, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
             data: (response) {
-              final serverMessage = response.message ?? '';
-
               if (!response.isSuccess || response.data.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -108,11 +108,7 @@ class StudentsListView extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.person_search,
-                        color: primaryColor,
-                        size: 48,
-                      ),
+                      Icon(Icons.person_search, color: primaryColor, size: 48),
                       const SizedBox(height: 12),
                       Text(
                         'No Students Found',
@@ -125,29 +121,15 @@ class StudentsListView extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Add your first student to get started',
-                        style: TextStyle(
-                          color: colors.hintColor,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: colors.hintColor, fontSize: 14),
                       ),
                     ],
                   ),
                 );
               }
 
-              final messageWidget = serverMessage.isNotEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Text(
-                        serverMessage,
-                        style: TextStyle(color: colors.hintColor, fontSize: 13),
-                      ),
-                    )
-                  : const SizedBox.shrink();
-
               return Column(
                 children: [
-                  messageWidget,
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -234,12 +216,16 @@ class StudentsListView extends ConsumerWidget {
                                           color: isActive
                                               ? Colors.green.withOpacity(0.2)
                                               : Colors.grey.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           isActive ? 'Active' : 'Inactive',
                                           style: TextStyle(
-                                            color: isActive ? Colors.green : Colors.grey,
+                                            color: isActive
+                                                ? Colors.green
+                                                : Colors.grey,
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -269,7 +255,10 @@ class StudentsListView extends ConsumerWidget {
                                     children: [
                                       Icon(Icons.delete, color: Colors.red),
                                       SizedBox(width: 8),
-                                      Text('Delete', style: TextStyle(color: Colors.red)),
+                                      Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ],
                                   ),
                                   onTap: () {
