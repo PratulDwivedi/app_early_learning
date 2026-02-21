@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/common/screens/edu_home_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import 'features/auth/providers/auth_service_provider.dart';
-import 'firebase/notification_service.dart';
+//import 'firebase/notification_service.dart';
 
 class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../common/services/app_snackbar_service.dart';
+import '../../common/widgets/theme_selector.dart';
 import '../providers/auth_service_provider.dart';
+import '../providers/theme_provider.dart';
 import '../../common/services/navigation_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -54,7 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (apiResponse.accessToken!.isEmpty) {
       AppSnackbarService.error(
         apiResponse.msg?.isEmpty ?? true
-            ? 'Login failed: No access  received'
+            ? 'Login failed: No access received'
             : apiResponse.msg!,
       );
       return;
@@ -67,19 +69,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = ref.watch(isDarkModeProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
+    
+    final bgColor = isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5);
+    final cardColor = isDarkMode ? const Color(0xFF2D2D2D) : Colors.white;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final hintColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final inputFillColor = isDarkMode ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final inputTextColor = isDarkMode ? Colors.white : Colors.black;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF8BC34A), // Light Green
-              Color(0xFF4CAF50), // Main Green
-              Color(0xFF2E7D32), // Deep Green
-            ],
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.color_lens),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const ThemeSelector(),
+              );
+            },
           ),
-        ),
+        ],
+      ),
+      body: Container(
+        color: bgColor,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -91,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -101,21 +120,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.eco,
+                    child: Icon(
+                      Icons.memory_rounded,
                       size: 60,
-                      color: Color(0xFF4CAF50),
+                      color: primaryColor,
                     ),
                   ),
                   const SizedBox(height: 30),
 
                   // Title
-                  const Text(
+                  Text(
                     'Welcome Early Learning',
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: textColor,
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -124,7 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     'Sign in to continue',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
+                      color: hintColor,
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -133,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -151,13 +170,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: 16, color: inputTextColor),
                             decoration: InputDecoration(
                               labelText: 'Login ID',
+                              labelStyle: TextStyle(color: hintColor),
                               hintText: 'Enter your email',
-                              prefixIcon: const Icon(Icons.email_outlined),
+                              hintStyle: TextStyle(color: hintColor),
+                              prefixIcon: Icon(Icons.email_outlined, color: hintColor),
                               filled: true,
-                              fillColor: const Color(0xFFF5F5F5),
+                              fillColor: inputFillColor,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide.none,
@@ -168,8 +189,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF4CAF50),
+                                borderSide: BorderSide(
+                                  color: primaryColor,
                                   width: 2,
                                 ),
                               ),
@@ -192,6 +213,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 vertical: 18,
                               ),
                             ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 20),
 
@@ -199,16 +226,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           TextFormField(
                             controller: _passwordController,
                             obscureText: !_isPasswordVisible,
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: 16, color: inputTextColor),
                             decoration: InputDecoration(
                               labelText: 'Password',
+                              labelStyle: TextStyle(color: hintColor),
                               hintText: 'Enter your password',
-                              prefixIcon: const Icon(Icons.lock_outline),
+                              hintStyle: TextStyle(color: hintColor),
+                              prefixIcon: Icon(Icons.lock_outline, color: hintColor),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _isPasswordVisible
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
+                                  color: hintColor,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -217,7 +247,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 },
                               ),
                               filled: true,
-                              fillColor: const Color(0xFFF5F5F5),
+                              fillColor: inputFillColor,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide.none,
@@ -228,8 +258,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF4CAF50),
+                                borderSide: BorderSide(
+                                  color: primaryColor,
                                   width: 2,
                                 ),
                               ),
@@ -273,17 +303,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
+                                    backgroundColor: cardColor,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    title: const Text('Forgot Password'),
-                                    content: const Text(
+                                    title: Text('Forgot Password', style: TextStyle(color: textColor)),
+                                    content: Text(
                                       'A password reset link will be sent to your email address.',
+                                      style: TextStyle(color: textColor),
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
-                                        child: const Text('Cancel'),
+                                        child: Text('Cancel', style: TextStyle(color: primaryColor)),
                                       ),
                                       ElevatedButton(
                                         onPressed: () {
@@ -291,20 +323,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
+                                            SnackBar(
+                                              content: const Text(
                                                 'Reset link sent to your email',
                                               ),
-                                              backgroundColor: Color(
-                                                0xFF4CAF50,
-                                              ),
+                                              backgroundColor: primaryColor,
                                             ),
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(
-                                            0xFF4CAF50,
-                                          ),
+                                          backgroundColor: primaryColor,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
                                               12,
@@ -318,7 +346,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 );
                               },
                               style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFF4CAF50),
+                                foregroundColor: primaryColor,
                               ),
                               child: const Text(
                                 'Forgot Password?',
@@ -347,19 +375,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ),
                               child: Ink(
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
+                                  gradient: LinearGradient(
                                     colors: [
-                                      Color(0xFF8BC34A),
-                                      Color(0xFF4CAF50),
-                                      Color(0xFF2E7D32),
+                                      primaryColor.withOpacity(0.8),
+                                      primaryColor,
+                                      primaryColor.withOpacity(0.6),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(
-                                        0xFF4CAF50,
-                                      ).withOpacity(0.4),
+                                      color: primaryColor.withOpacity(0.4),
                                       blurRadius: 15,
                                       offset: const Offset(0, 8),
                                     ),
