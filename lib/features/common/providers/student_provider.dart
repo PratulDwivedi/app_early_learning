@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/models/guardian_model.dart';
 import '../services/edu_service.dart';
 import '../models/student_model.dart';
 import '../models/response_message_model.dart';
@@ -68,3 +69,21 @@ final studentFormProvider =
     StateNotifierProvider.autoDispose<StudentFormNotifier, Student>((ref) {
   return StudentFormNotifier();
 });
+
+
+// Guardians List Provider - with autoDispose for fresh data
+final getGuardiansProvider = FutureProvider.autoDispose<List<Guardian>>(
+  (ref) async {
+    final service = ref.watch(eduServiceProvider);
+    final response = await service.getGuardians();
+    
+    if (response.isSuccess && response.data.isNotEmpty) {
+      // Parse the list of guardians from response data
+      final guardiansList = (response.data as List)
+          .map((item) => Guardian.fromJson(item as Map<String, dynamic>))
+          .toList();
+      return guardiansList;
+    }
+    return [];
+  },
+);

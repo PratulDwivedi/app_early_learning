@@ -44,7 +44,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     Colors.red,
     Colors.teal,
     Colors.indigo,
-    Colors.pink,
+    Colors.grey,
   ];
 }
 

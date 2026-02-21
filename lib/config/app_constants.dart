@@ -15,6 +15,7 @@ class ApiRoutes {
   static const String fileMetadata = '';
   static const String htmlContent = '';
   static const String feedback = 'edu.fn_save_feedback';
+  static const String getGuardians = 'edu.fn_get_gurdians';
 }
 
 class AppPageRoute {
@@ -30,6 +31,7 @@ class AppPageRoute {
   static const String changePassword = 'changePassword';
   static const String helpline = 'helpline';
   static const String feedback = 'feedback';
+  static const String guardians = 'guardians';
 }
 
 class AppPageIds {

@@ -3,17 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_constants.dart';
 import '../models/screen_args_model.dart';
 import '../services/navigation_service.dart';
+import '../../auth/providers/theme_provider.dart';
 
 class BottomNavBar extends ConsumerWidget {
   const BottomNavBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+    
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF111827),
-        //color:  Color(0xFF4CAF50) ,
-        border: Border(top: BorderSide(color: Color(0xFF1F2937))),
+      decoration: BoxDecoration(
+        color: colors.cardColor,
+        border: Border(top: BorderSide(color: colors.hintColor.withOpacity(0.2))),
       ),
       child: SafeArea(
         child: Padding(
@@ -59,7 +61,7 @@ class BottomNavBar extends ConsumerWidget {
                 isActive: false,
                 onTap: () {
                   ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                    routeName: AppPageRoute.helpline,
+                    routeName: AppPageRoute.guardians,
                     name: "Guardians",
                     data: {},
                   );
@@ -77,7 +79,7 @@ class BottomNavBar extends ConsumerWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends ConsumerWidget {
   final IconData icon;
   final String label;
   final bool isActive;
@@ -91,7 +93,10 @@ class _NavItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
+    
     return InkWell(
       onTap: onTap,
       child: Stack(
@@ -101,14 +106,14 @@ class _NavItem extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: isActive ? Colors.white : const Color(0xFF6B7280),
+                color: isActive ? primaryColor : colors.hintColor,
                 size: 24,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? Colors.white : const Color(0xFF6B7280),
+                  color: isActive ? primaryColor : colors.hintColor,
                   fontSize: 12,
                 ),
               ),

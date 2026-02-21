@@ -140,7 +140,7 @@ class StudentsListView extends ConsumerWidget {
                       final firstName = student['first_name'] ?? 'Unknown';
                       final lastName = student['last_name'] ?? '';
                       final grade = student['grade'] ?? '-';
-                      final isActive = student['is_active'] as bool? ?? false;
+                      final email = student['email'];
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -191,6 +191,15 @@ class StudentsListView extends ConsumerWidget {
                                       fontSize: 16,
                                     ),
                                   ),
+
+                                  Text(
+                                    email,
+                                    style: TextStyle(
+                                      color: colors.hintColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
@@ -205,31 +214,6 @@ class StudentsListView extends ConsumerWidget {
                                         style: TextStyle(
                                           color: colors.hintColor,
                                           fontSize: 12,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isActive
-                                              ? Colors.green.withOpacity(0.2)
-                                              : Colors.grey.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          isActive ? 'Active' : 'Inactive',
-                                          style: TextStyle(
-                                            color: isActive
-                                                ? Colors.green
-                                                : Colors.grey,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
                                         ),
                                       ),
                                     ],
@@ -254,16 +238,29 @@ class StudentsListView extends ConsumerWidget {
                                 PopupMenuItem(
                                   child: const Row(
                                     children: [
-                                      Icon(Icons.question_answer, color: Colors.red),
+                                      Icon(Icons.question_answer),
                                       SizedBox(width: 8),
-                                      Text(
-                                        'Evaluate',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
+                                      Text('Evaluate'),
                                     ],
                                   ),
                                   onTap: () {
-                                    NavigationService.navigateTo(AppPageRoute.evaluation);
+                                    NavigationService.navigateTo(
+                                      AppPageRoute.evaluation,
+                                    );
+                                  },
+                                ),
+                                PopupMenuItem(
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.question_answer),
+                                      SizedBox(width: 8),
+                                      Text('Report Card'),
+                                    ],
+                                  ),
+                                  onTap: () {
+                                    NavigationService.navigateTo(
+                                      AppPageRoute.evaluation,
+                                    );
                                   },
                                 ),
                               ],
