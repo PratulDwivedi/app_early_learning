@@ -53,18 +53,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     setState(() => _isLoading = false);
 
-    if (apiResponse.accessToken!.isEmpty) {
+    // ✅ Safe null-aware check — no force unwrap
+    if (!(apiResponse.accessToken?.isNotEmpty == true)) {
       AppSnackbarService.error(
-        apiResponse.msg?.isEmpty ?? true
-            ? 'Login failed: No access received'
-            : apiResponse.msg!,
+        apiResponse.msg?.isNotEmpty == true
+            ? apiResponse.msg!
+            : 'Login failed: Invalid email or password',
       );
       return;
     }
 
-    // Refresh user data from server after successful login
+    // ✅ Only reaches here on successful login
     await ref.read(authProvider.notifier).refreshUserFromServer();
-
     NavigationService.clearAndNavigate('home');
   }
 

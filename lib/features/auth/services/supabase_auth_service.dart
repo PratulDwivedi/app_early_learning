@@ -42,29 +42,34 @@ class SupabaseAuthService implements AuthService {
       'email': email,
       'password': password,
     });
+
+    // ✅ Return early with the model (caller checks accessToken)
+    if (authResponse.accessToken == null || authResponse.accessToken!.isEmpty) {
+      return authResponse;
+    }
+
+    // ✅ Only reaches here if accessToken is valid
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('access_token', authResponse.accessToken!);
-    // If signin succeeded, fetch profile and cache it locally
-    if (authResponse.accessToken!.isNotEmpty) {
-      try {
-        final profileResponse = await SupabaseApiHelper.post(
-          ApiRoutes.profile,
-          null,
-        );
 
-        if (profileResponse.isSuccess) {
-          // store the first item from response.data as user_profile
-          if (profileResponse.data.isNotEmpty) {
-            await prefs.setString('refresh_token', authResponse.refreshToken!);
-            await prefs.setString(
-              'user_profile',
-              json.encode(profileResponse.data[0]),
-            );
-          }
-        }
-      } catch (e) {
-        // ignore profile caching errors for now; signin still succeeded
+    if (authResponse.refreshToken != null) {
+      await prefs.setString('refresh_token', authResponse.refreshToken!);
+    }
+
+    try {
+      final profileResponse = await SupabaseApiHelper.post(
+        ApiRoutes.profile,
+        null,
+      );
+
+      if (profileResponse.isSuccess && profileResponse.data.isNotEmpty) {
+        await prefs.setString(
+          'user_profile',
+          json.encode(profileResponse.data[0]),
+        );
       }
+    } catch (e) {
+      // ignore profile caching errors — signin still succeeded
     }
 
     return authResponse;
