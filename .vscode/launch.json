@@ -23,8 +23,7 @@
     {
       "name": "iPad-Simulator",
       "request": "launch",
-      "type": "dart",
-      "deviceId": "4530D656-A926-4594-B5FE-3920A27BFF19"
+      "type": "dart"
     },
     {
       "name": "iOS-Simulator",
