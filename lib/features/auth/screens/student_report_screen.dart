@@ -18,18 +18,18 @@ class StudentReportScreen extends ConsumerWidget {
     final studentData = args?.data;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CommonGradientHeader(
-              title: "Kid Reports",
-              onRefresh: () {
-                ref.invalidate(studentSummaryProvider);
-              },
-            ),
-            StudentReportContent(studentData: studentData),
-          ],
-        ),
+      body: Column(
+        children: [
+          CommonGradientHeader(
+            title: "Kid Reports",
+            onRefresh: () {
+              ref.invalidate(studentSummaryProvider);
+            },
+          ),
+          Expanded(
+            child: StudentReportContent(studentData: studentData),
+          ),
+        ],
       ),
     );
   }
@@ -46,9 +46,7 @@ class StudentReportContent extends ConsumerWidget {
     final colors = ref.watch(themeColorsProvider);
     final summaryAsync = ref.watch(studentSummaryProvider);
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: summaryAsync.when(
+    return summaryAsync.when(
         data: (summaryData) {
           if (summaryData.isEmpty) {
             return Center(
@@ -73,9 +71,11 @@ class StudentReportContent extends ConsumerWidget {
             );
           }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Student Info Card (if student data is passed)
               if (studentData != null)
                 Padding(
@@ -301,7 +301,8 @@ class StudentReportContent extends ConsumerWidget {
                   ),
                 );
               }),
-            ],
+              ],
+            ),
           );
         },
         loading: () => Center(
@@ -350,8 +351,7 @@ class StudentReportContent extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSummaryCards(

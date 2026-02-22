@@ -113,7 +113,7 @@ class AppSidebarDrawer extends ConsumerWidget {
                 children: [
                   _DrawerMenuItem(
                     icon: Icons.volume_up_rounded,
-                    iconColor: const Color(0xFF4CAF50),
+                    iconColor: primaryColor,
                     title: 'Speech Settings',
                     onTap: () {
                       Navigator.pop(context);
@@ -122,7 +122,7 @@ class AppSidebarDrawer extends ConsumerWidget {
                   ),
                   _DrawerMenuItem(
                     icon: Icons.password,
-                    iconColor: const Color(0xFFFF6B6B),
+                    iconColor: primaryColor,
                     title: 'Change Password',
                     onTap: () {
                       Navigator.pop(context);
@@ -141,7 +141,7 @@ class AppSidebarDrawer extends ConsumerWidget {
                   Divider(height: 32, thickness: 1, color: colors.hintColor),
                   _DrawerMenuItem(
                     icon: Icons.logout,
-                    iconColor: const Color(0xFF9C27B0),
+                    iconColor: primaryColor,
                     title: 'Logout',
                     onTap: () {
                       _showLogoutDialog(context, ref, colors, primaryColor);

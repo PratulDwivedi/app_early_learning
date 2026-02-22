@@ -204,7 +204,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                           style: TextStyle(color: primaryColor),
                                         ),
                                       ),
-                                      ElevatedButton(
+                                      CustomPrimaryButton(
+                                        primaryColor: primaryColor,
+                                        label: "Send Reset Link",
                                         onPressed: () {
                                           Navigator.pop(context);
                                           ScaffoldMessenger.of(
@@ -218,15 +220,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                             ),
                                           );
                                         },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: primaryColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Text('Send'),
                                       ),
                                     ],
                                   ),
