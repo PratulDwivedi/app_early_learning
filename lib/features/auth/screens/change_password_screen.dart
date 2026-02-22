@@ -1,8 +1,11 @@
+import '../../common/widgets/custom_button.dart';
+import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/models/screen_args_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../providers/auth_service_provider.dart';
+import '../providers/theme_provider.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   final ScreenArgsModel args;
@@ -31,6 +34,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = ref.watch(primaryColorProvider);
+    final colors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -51,46 +57,30 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 8),
-                    TextFormField(
+                    PasswordTextFormField(
                       controller: _oldPasswordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Current Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your current password';
-                        }
-                        return null;
-                      },
+                      labelText: 'Current Password',
+
+                      colors: colors,
+                      primaryColor: primaryColor,
                     ),
+
                     const SizedBox(height: 16),
-                    TextFormField(
+
+                    PasswordTextFormField(
                       controller: _newPasswordController,
-                      decoration: const InputDecoration(
-                        labelText: 'New Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a new password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      labelText: 'New Password',
+                      colors: colors,
+                      primaryColor: primaryColor,
                     ),
+
                     const SizedBox(height: 16),
-                    TextFormField(
+
+                    PasswordTextFormField(
                       controller: _confirmPasswordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirm New Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
+                      labelText: 'Confirm New Password',
+                      colors: colors,
+                      primaryColor: primaryColor,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please confirm your new password';
@@ -101,17 +91,21 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
-                    _isChangingPassword
-                        ? const Center(child: CircularProgressIndicator())
-                        : ElevatedButton(
-                            onPressed: _submitChangePassword,
-                            child: const Text('Change Password'),
-                          ),
-                    const SizedBox(height: 8),
-                    TextButton(
+                    const SizedBox(height: 16),
+                    CustomPrimaryButton(
+                      label: 'Change Password',
+                      onPressed: _submitChangePassword,
+                      isLoading: _isChangingPassword,
+                      primaryColor: primaryColor,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    CustomSecondaryButton(
+                      label: 'Clear',
                       onPressed: _clearForm,
-                      child: const Text('Clear'),
+                      primaryColor: primaryColor,
+                      textColor: colors.textColor,
                     ),
                   ],
                 ),
@@ -122,7 +116,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       ),
     );
   }
-
 
   void _submitChangePassword() async {
     if (!mounted) return;
@@ -154,9 +147,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         }
       } catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $error')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $error')));
         }
       } finally {
         if (mounted) setState(() => _isChangingPassword = false);

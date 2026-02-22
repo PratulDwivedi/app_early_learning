@@ -127,6 +127,7 @@ class PasswordTextFormField extends StatefulWidget {
   final ThemeColors colors;
   final Color primaryColor;
   final String labelText;
+  final ValidatorCallback? validator;
 
   const PasswordTextFormField({
     Key? key,
@@ -134,6 +135,7 @@ class PasswordTextFormField extends StatefulWidget {
     required this.colors,
     required this.primaryColor,
     this.labelText = 'Password',
+    this.validator,
   }) : super(key: key);
 
   @override
@@ -204,7 +206,8 @@ class _PasswordTextFormFieldState extends State<PasswordTextFormField> {
           vertical: 18,
         ),
       ),
-      validator: (value) {
+      validator: widget.validator ??
+          (value) {
         if (value == null || value.isEmpty) {
           return 'Please enter your ${widget.labelText.toLowerCase()}';
         }
