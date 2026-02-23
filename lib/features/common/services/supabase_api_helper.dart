@@ -6,6 +6,8 @@ import '../models/auth_response_model.dart';
 import '../models/response_message_model.dart';
 
 class SupabaseApiHelper {
+  static Future<bool>? _refreshInFlight;
+
   static Future<Map<String, String>> httpHeader(String? route) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -57,35 +59,129 @@ class SupabaseApiHelper {
     return AuthResponseModel.fromJson(jsonDecode(response.body));
   }
 
+  static bool _isJwtExpiredResponse(ResponseMessageModel response) {
+    final message = response.message.toLowerCase();
+    return response.statusCode == 401 ||
+        message.contains('jwt expired') ||
+        message.contains('token expired') ||
+        message.contains('invalid jwt');
+  }
+
+  static Future<AuthResponseModel> refreshSession(String refreshToken) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'apikey': appConfig.localKey,
+    };
+
+    final uri = Uri.parse(
+      '${appConfig.apiBaseUrl}/auth/v1/token?grant_type=refresh_token',
+    );
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: jsonEncode({'refresh_token': refreshToken}),
+    );
+
+    return AuthResponseModel.fromJson(jsonDecode(response.body));
+  }
+
+  static Future<bool> tryRefreshAccessToken() async {
+    if (_refreshInFlight != null) {
+      return _refreshInFlight!;
+    }
+
+    _refreshInFlight = _refreshAccessTokenInternal();
+    try {
+      return await _refreshInFlight!;
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
+
+  static Future<bool> _refreshAccessTokenInternal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString('refresh_token');
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+
+    final refreshResponse = await refreshSession(refreshToken);
+    final newAccessToken = refreshResponse.accessToken;
+
+    if (newAccessToken == null || newAccessToken.isEmpty) {
+      return false;
+    }
+
+    await prefs.setString('access_token', newAccessToken);
+    if (refreshResponse.refreshToken != null &&
+        refreshResponse.refreshToken!.isNotEmpty) {
+      await prefs.setString('refresh_token', refreshResponse.refreshToken!);
+    }
+    return true;
+  }
+
   // POST request
   static Future<ResponseMessageModel> post(
     String route,
     Map<String, dynamic>? data,
   ) async {
-    final headers = await httpHeader(route);
-
     String functionName = route.trim().split('.').last;
-
     final body = jsonEncode(data ?? {});
+
+    final headers = await httpHeader(route);
     Uri uri = Uri.parse('${appConfig.apiBaseUrl}/rest/v1/rpc/$functionName');
-    final response = await http.post(uri, headers: headers, body: body);
-    return ResponseMessageModel.fromJson(jsonDecode(response.body));
+    final firstResponse = await http.post(uri, headers: headers, body: body);
+    final parsedFirst = ResponseMessageModel.fromJson(
+      jsonDecode(firstResponse.body),
+    );
+
+    if (_isJwtExpiredResponse(parsedFirst)) {
+      final refreshed = await tryRefreshAccessToken();
+      if (refreshed) {
+        final retriedHeaders = await httpHeader(route);
+        final retryResponse = await http.post(
+          uri,
+          headers: retriedHeaders,
+          body: body,
+        );
+        return ResponseMessageModel.fromJson(jsonDecode(retryResponse.body));
+      }
+    }
+
+    return parsedFirst;
   }
 
   static Future<ResponseMessageModel> postEdg(
     String route,
     Map<String, dynamic>? data,
   ) async {
-    final headers = await httpHeader(route);
-
     String functionName = route.trim().split('.').last;
 
+    final headers = await httpHeader(route);
     Uri uri = Uri.parse('${appConfig.apiBaseUrl}/functions/v1/$functionName');
-    final response = await http.post(
+    final firstResponse = await http.post(
       uri,
       headers: headers,
       body: jsonEncode(data),
     );
-    return ResponseMessageModel.fromJson(jsonDecode(response.body));
+    final parsedFirst = ResponseMessageModel.fromJson(
+      jsonDecode(firstResponse.body),
+    );
+
+    if (_isJwtExpiredResponse(parsedFirst)) {
+      final refreshed = await tryRefreshAccessToken();
+      if (refreshed) {
+        final retriedHeaders = await httpHeader(route);
+        final retryResponse = await http.post(
+          uri,
+          headers: retriedHeaders,
+          body: jsonEncode(data),
+        );
+        return ResponseMessageModel.fromJson(jsonDecode(retryResponse.body));
+      }
+    }
+
+    return parsedFirst;
   }
 }

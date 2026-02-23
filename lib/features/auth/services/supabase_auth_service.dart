@@ -95,6 +95,7 @@ class SupabaseAuthService implements AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user_profile');
       await prefs.remove('access_token');
+      await prefs.remove('refresh_token');
     } catch (e) {
       rethrow;
     }

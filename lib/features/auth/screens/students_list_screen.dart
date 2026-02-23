@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/services/navigation_service.dart';
 import '../../common/models/screen_args_model.dart';
+import '../../common/models/response_message_model.dart';
+import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 import '../../common/providers/student_provider.dart';
 import '../../../config/app_constants.dart';
@@ -41,6 +43,7 @@ class StudentsListView extends ConsumerStatefulWidget {
 class _StudentsListViewState extends ConsumerState<StudentsListView> {
   late TextEditingController _searchController;
   String _searchQuery = '';
+  bool _isHandlingJwtExpiry = false;
 
   @override
   void initState() {
@@ -57,6 +60,27 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  bool _isJwtExpiredResponse(ResponseMessageModel response) {
+    final message = response.message.toLowerCase();
+    return response.statusCode == 401 ||
+        message.contains('jwt expired') ||
+        message.contains('token expired') ||
+        message.contains('invalid jwt');
+  }
+
+  void _handleJwtExpired() {
+    if (_isHandlingJwtExpiry || !mounted) return;
+    _isHandlingJwtExpiry = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+      if (!mounted) return;
+      NavigationService.clearAndNavigate('login');
+    });
   }
 
   @override
@@ -128,6 +152,19 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
             ),
             data: (response) {
               if (!response.isSuccess || response.data.isEmpty) {
+                if (_isJwtExpiredResponse(response)) {
+                  _handleJwtExpired();
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colors.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -139,7 +176,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                       Icon(Icons.person_search, color: primaryColor, size: 48),
                       const SizedBox(height: 12),
                       Text(
-                        'No Students Found',
+                        response.message,
                         style: TextStyle(
                           color: colors.textColor,
                           fontWeight: FontWeight.bold,
