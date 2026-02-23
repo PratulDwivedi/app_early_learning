@@ -24,6 +24,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool _hasAcceptedDisclaimer = false;
 
   @override
   void dispose() {
@@ -39,6 +40,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
 
     if (_passwordController.text != _confirmPasswordController.text) {
       AppSnackbarService.error('Passwords do not match');
+      return;
+    }
+
+    if (!_hasAcceptedDisclaimer) {
+      AppSnackbarService.error('Please accept the disclaimer to continue');
       return;
     }
 
@@ -120,25 +126,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                   AppLogoBadge(
                     backgroundColor: colors.cardColor,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
 
                   // Title
                   Text(
                     'Create Account',
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: colors.textColor,
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Join Early Learning Today',
-                    style: TextStyle(fontSize: 16, color: colors.hintColor),
-                  ),
-                  const SizedBox(height: 40),
-
+                  const SizedBox(height: 20),
+                
                   // Signup Form Card
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -187,6 +188,73 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                             colors: colors,
                             primaryColor: primaryColor,
                             labelText: 'Confirm Password',
+                          ),
+                          const SizedBox(height: 16),
+
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: colors.inputFillColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _hasAcceptedDisclaimer
+                                    ? primaryColor.withOpacity(0.6)
+                                    : colors.hintColor.withOpacity(0.35),
+                                width: _hasAcceptedDisclaimer ? 1.6 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Disclaimer',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: colors.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Please note that this assessment session will be video and audio recorded for evaluation and verification purposes. By proceeding, you are providing your consent for the recording and use of this data solely for assessment and quality review.',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    height: 1.35,
+                                    color: colors.hintColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Checkbox(
+                                      value: _hasAcceptedDisclaimer,
+                                      activeColor: primaryColor,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _hasAcceptedDisclaimer =
+                                              value ?? false;
+                                        });
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: Text(
+                                          'I have read and agree to this disclaimer.',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: colors.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 24),
 

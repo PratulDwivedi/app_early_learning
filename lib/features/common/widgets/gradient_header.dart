@@ -4,6 +4,7 @@ import '../../auth/providers/auth_service_provider.dart';
 import '../../auth/providers/theme_provider.dart';
 import '../../../config/app_constants.dart';
 import '../services/navigation_service.dart';
+import 'app_logo_badge.dart';
 import 'theme_selector.dart';
 
 class GradientHeader extends ConsumerWidget {
@@ -13,6 +14,7 @@ class GradientHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(authProvider);
     final primaryColor = ref.watch(primaryColorProvider);
+    final colors = ref.watch(themeColorsProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -119,11 +121,13 @@ class GradientHeader extends ConsumerWidget {
                 else
                   Column(
                     children: [
+                      AppLogoBadge(backgroundColor: colors.cardColor),
+                      const SizedBox(height: 20),
                       Text(
                         currentUser.tenantName,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -133,7 +137,7 @@ class GradientHeader extends ConsumerWidget {
                         currentUser.fullName,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 16,
                           fontWeight: FontWeight.normal,
                         ),
                       ),
@@ -180,7 +184,7 @@ class GradientHeader extends ConsumerWidget {
                           : const SizedBox(),
                     ],
                   ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
               ],
             ),
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer' as developer;
-import '../../common/widgets/custom_dropdown_form_field.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../providers/theme_provider.dart';
@@ -124,6 +123,23 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     NavigationService.goBack();
   }
 
+  List<Color> _buildOptionPalette(Color seedColor) {
+    final seedHsl = HSLColor.fromColor(seedColor);
+    final hueShifts = [0.0, 45.0, 95.0, 150.0];
+    final saturation = (seedHsl.saturation + 0.18).clamp(0.55, 0.9).toDouble();
+    final lightness = seedHsl.lightness < 0.45 ? 0.58 : 0.52;
+
+    return hueShifts
+        .map(
+          (shift) => seedHsl
+              .withHue((seedHsl.hue + shift) % 360)
+              .withSaturation(saturation)
+              .withLightness(lightness)
+              .toColor(),
+        )
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
@@ -133,6 +149,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final currentQuestion = _mockQuestions[_currentQuestionIndex];
     final questionText = currentQuestion['text'] as String;
     final options = currentQuestion['options'] as List<String>;
+    final modeOptions = _evaluationModes.where((mode) => mode.isNotEmpty).toList();
+    final optionPalette = _buildOptionPalette(primaryColor);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -154,14 +172,14 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                 children: [
                   // Evaluation Mode Selector
                   if (!_isStarted) ...[
-                    Text(
-                      'Select Evaluation Mode',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textColor,
-                      ),
-                    ),
+                    // Text(
+                    //   'Select Evaluation Mode',
+                    //   style: TextStyle(
+                    //     fontSize: 20,
+                    //     fontWeight: FontWeight.bold,
+                    //     color: colors.textColor,
+                    //   ),
+                    // ),
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -176,22 +194,68 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                           ),
                         ],
                       ),
-                      child: CustomDropdownFormField<String>(
-                        value: _selectedMode,
-                        labelText: 'Evaluation Mode',
-                        prefixIcon: Icon(
-                          Icons.category_outlined,
-                          color: colors.hintColor,
-                        ),
-                        fillColor: colors.inputFillColor,
-                        hintColor: colors.hintColor,
-                        primaryColor: primaryColor,
-                        items: _evaluationModes,
-                        itemLabel: (mode) => mode,
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedMode = value);
-                          }
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isTwoColumn = constraints.maxWidth > 520;
+                          final cardWidth = isTwoColumn
+                              ? (constraints.maxWidth - 12) / 2
+                              : constraints.maxWidth;
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: modeOptions.map((mode) {
+                              final isSelected = _selectedMode == mode;
+                              return SizedBox(
+                                width: cardWidth,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () =>
+                                      setState(() => _selectedMode = mode),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? primaryColor.withOpacity(0.15)
+                                          : colors.inputFillColor,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? primaryColor
+                                            : colors.hintColor.withOpacity(0.3),
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            mode,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: colors.textColor,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Icon(
+                                          isSelected
+                                              ? Icons.check_circle
+                                              : Icons
+                                                  .radio_button_unchecked,
+                                          color: isSelected
+                                              ? primaryColor
+                                              : colors.hintColor,
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
                         },
                       ),
                     ),
@@ -273,88 +337,99 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                           Column(
                             children: List.generate(
                               options.length,
-                              (index) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: _selectedOption == options[index]
-                                        ? primaryColor.withOpacity(0.2)
-                                        : colors.inputFillColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: _selectedOption == options[index]
-                                          ? primaryColor
-                                          : colors.hintColor.withOpacity(0.3),
-                                      width: _selectedOption == options[index]
-                                          ? 2
-                                          : 1,
+                              (index) {
+                                final optionColor =
+                                    optionPalette[index % optionPalette.length];
+                                final isSelected =
+                                    _selectedOption == options[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? Color.alphaBlend(
+                                              primaryColor.withOpacity(0.25),
+                                              optionColor.withOpacity(0.24),
+                                            )
+                                          : optionColor.withOpacity(0.16),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? primaryColor
+                                            : optionColor.withOpacity(0.7),
+                                        width: isSelected ? 2 : 1.4,
+                                      ),
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            setState(
-                                              () =>
-                                                  _selectedOption = options[index],
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16),
-                                            child: Row(
-                                              children: [
-                                                Radio<String>(
-                                                  value: options[index],
-                                                  groupValue: _selectedOption,
-                                                  onChanged: (value) {
-                                                    if (value != null) {
-                                                      setState(() =>
-                                                          _selectedOption = value);
-                                                    }
-                                                  },
-                                                  activeColor: primaryColor,
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(
+                                                () => _selectedOption =
                                                     options[index],
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      color: colors.textColor,
-                                                      fontWeight:
-                                                          FontWeight.w500,
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Row(
+                                                children: [
+                                                  Radio<String>(
+                                                    value: options[index],
+                                                    groupValue: _selectedOption,
+                                                    onChanged: (value) {
+                                                      if (value != null) {
+                                                        setState(() =>
+                                                            _selectedOption =
+                                                                value);
+                                                      }
+                                                    },
+                                                    activeColor: optionColor,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      options[index],
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        color: colors.textColor,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 8),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: primaryColor.withOpacity(0.15),
-                                          ),
-                                          child: IconButton(
-                                            icon: Icon(
-                                              Icons.volume_up_rounded,
-                                              size: 20,
-                                              color: primaryColor,
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 8),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: optionColor.withOpacity(
+                                                isSelected ? 0.30 : 0.2,
+                                              ),
                                             ),
-                                            onPressed: () =>
-                                                _playOptionAudio(index),
-                                            tooltip: 'Play option audio',
+                                            child: IconButton(
+                                              icon: Icon(
+                                                Icons.volume_up_rounded,
+                                                size: 20,
+                                                color: optionColor,
+                                              ),
+                                              onPressed: () =>
+                                                  _playOptionAudio(index),
+                                              tooltip: 'Play option audio',
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(height: 24),
