@@ -184,4 +184,100 @@ class SupabaseApiHelper {
 
     return parsedFirst;
   }
+
+  static ResponseMessageModel _parseAuthApiResponse(
+    http.Response response, {
+    String successMessage = 'Request successful',
+  }) {
+    final statusCode = response.statusCode;
+    final dynamic decoded = response.body.isNotEmpty
+        ? jsonDecode(response.body)
+        : null;
+
+    if (statusCode >= 200 && statusCode < 300) {
+      return ResponseMessageModel(
+        isSuccess: true,
+        statusCode: statusCode,
+        message: successMessage,
+        data: const [],
+      );
+    }
+
+    String errorMessage = 'Request failed';
+    if (decoded is Map<String, dynamic>) {
+      errorMessage =
+          (decoded['msg'] ??
+                  decoded['message'] ??
+                  decoded['error_description'] ??
+                  decoded['error'])
+              ?.toString() ??
+          errorMessage;
+    }
+
+    return ResponseMessageModel.error(
+      statusCode: statusCode,
+      message: errorMessage,
+    );
+  }
+
+  static Future<ResponseMessageModel> updateAuthPassword(
+    String newPassword,
+  ) async {
+    final uri = Uri.parse('${appConfig.apiBaseUrl}/auth/v1/user');
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString('access_token');
+
+    if (accessToken == null || accessToken.isEmpty) {
+      return ResponseMessageModel.error(
+        statusCode: 401,
+        message: 'Session expired. Please login again.',
+      );
+    }
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'apikey': appConfig.localKey,
+      'Authorization': 'Bearer $accessToken',
+    };
+
+    final firstResponse = await http.put(
+      uri,
+      headers: headers,
+      body: jsonEncode({'password': newPassword}),
+    );
+    final parsedFirst = _parseAuthApiResponse(
+      firstResponse,
+      successMessage: 'Password updated successfully',
+    );
+
+    if (_isJwtExpiredResponse(parsedFirst)) {
+      final refreshed = await tryRefreshAccessToken();
+      if (refreshed) {
+        final refreshedToken = prefs.getString('access_token');
+        if (refreshedToken == null || refreshedToken.isEmpty) {
+          return ResponseMessageModel.error(
+            statusCode: 401,
+            message: 'Session expired. Please login again.',
+          );
+        }
+
+        final retriedHeaders = <String, String>{
+          'Content-Type': 'application/json',
+          'apikey': appConfig.localKey,
+          'Authorization': 'Bearer $refreshedToken',
+        };
+        final retryResponse = await http.put(
+          uri,
+          headers: retriedHeaders,
+          body: jsonEncode({'password': newPassword}),
+        );
+        return _parseAuthApiResponse(
+          retryResponse,
+          successMessage: 'Password updated successfully',
+        );
+      }
+    }
+
+    return parsedFirst;
+  }
 }

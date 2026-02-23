@@ -108,11 +108,36 @@ class SupabaseAuthService implements AuthService {
     String confirmPassword,
   ) {
     return SupabaseApiHelper.safeApiCall(() async {
-      return await SupabaseApiHelper.post(ApiRoutes.updatePassword, {
-        'p_old_password': oldPassword,
-        'p_new_password': newPassword,
-        'p_confirm_password': confirmPassword,
+      if (newPassword != confirmPassword) {
+        return ResponseMessageModel.error(
+          statusCode: 400,
+          message: 'New password and confirm password do not match',
+        );
+      }
+
+      final currentUser = await getCurrentUser();
+      if (currentUser == null || currentUser.email.isEmpty) {
+        return ResponseMessageModel.error(
+          statusCode: 401,
+          message: 'User session not found. Please login again.',
+        );
+      }
+
+      // Re-authenticate with current password before allowing password update.
+      final verifyResponse = await SupabaseApiHelper.signin(ApiRoutes.signIn, {
+        'email': currentUser.email,
+        'password': oldPassword,
       });
+
+      if (verifyResponse.accessToken == null ||
+          verifyResponse.accessToken!.isEmpty) {
+        return ResponseMessageModel.error(
+          statusCode: 401,
+          message: verifyResponse.msg ?? 'Current password is incorrect',
+        );
+      }
+
+      return await SupabaseApiHelper.updateAuthPassword(newPassword);
     });
   }
 

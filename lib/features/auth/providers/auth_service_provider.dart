@@ -89,6 +89,45 @@ final updatePasswordProvider =
       );
     });
 
+final changePasswordControllerProvider = StateNotifierProvider.autoDispose<
+  ChangePasswordController,
+  AsyncValue<ResponseMessageModel?>
+>((ref) {
+  return ChangePasswordController(ref);
+});
+
+class ChangePasswordController
+    extends StateNotifier<AsyncValue<ResponseMessageModel?>> {
+  ChangePasswordController(this.ref) : super(const AsyncValue.data(null));
+
+  final Ref ref;
+
+  Future<ResponseMessageModel> submit({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final service = ref.read(authServiceProvider);
+      final response = await service.updatePassword(
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      );
+      state = AsyncValue.data(response);
+      return response;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return ResponseMessageModel.error(message: e.toString());
+    }
+  }
+
+  void reset() {
+    state = const AsyncValue.data(null);
+  }
+}
+
 final signUpProvider =
     FutureProvider.family<ResponseMessageModel, Map<String, String>>((
       ref,

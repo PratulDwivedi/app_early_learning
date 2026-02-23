@@ -4,6 +4,8 @@ import '../../common/models/screen_args_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
+import '../../common/services/navigation_service.dart';
+import '../../common/models/response_message_model.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 
@@ -22,7 +24,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _isChangingPassword = false;
+
+  bool _isJwtExpiredResponse(ResponseMessageModel response) {
+    final message = response.message.toLowerCase();
+    return response.statusCode == 401 ||
+        message.contains('jwt expired') ||
+        message.contains('token expired') ||
+        message.contains('invalid jwt');
+  }
 
   @override
   void dispose() {
@@ -36,6 +45,41 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
+    final changePasswordState = ref.watch(changePasswordControllerProvider);
+    final isChangingPassword = changePasswordState.isLoading;
+
+    ref.listen<AsyncValue<ResponseMessageModel?>>(
+      changePasswordControllerProvider,
+      (previous, next) async {
+        next.whenOrNull(
+          data: (response) async {
+            if (response == null || !mounted) return;
+
+            if (response.isSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Password changed successfully')),
+              );
+              _clearForm();
+            } else if (_isJwtExpiredResponse(response)) {
+              final authService = ref.read(authServiceProvider);
+              await authService.signOut();
+              if (!mounted) return;
+              NavigationService.clearAndNavigate('login');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: ${response.message}')),
+              );
+            }
+          },
+          error: (error, stackTrace) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Error: $error')));
+          },
+        );
+      },
+    );
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -95,7 +139,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     CustomPrimaryButton(
                       label: 'Change Password',
                       onPressed: _submitChangePassword,
-                      isLoading: _isChangingPassword,
+                      isLoading: isChangingPassword,
                       primaryColor: primaryColor,
                     ),
 
@@ -117,43 +161,16 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     );
   }
 
-  void _submitChangePassword() async {
+  void _submitChangePassword() {
     if (!mounted) return;
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isChangingPassword = true);
-
-      try {
-        final response = await ref.read(
-          updatePasswordProvider({
-            'oldPassword': _oldPasswordController.text,
-            'newPassword': _newPasswordController.text,
-            'confirmPassword': _confirmPasswordController.text,
-          }).future,
-        );
-
-        if (response.isSuccess) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Password changed successfully')),
-            );
-            _clearForm();
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${response.message}')),
-            );
-          }
-        }
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $error')));
-        }
-      } finally {
-        if (mounted) setState(() => _isChangingPassword = false);
-      }
+      ref
+          .read(changePasswordControllerProvider.notifier)
+          .submit(
+            oldPassword: _oldPasswordController.text.trim(),
+            newPassword: _newPasswordController.text.trim(),
+            confirmPassword: _confirmPasswordController.text.trim(),
+          );
     }
   }
 
