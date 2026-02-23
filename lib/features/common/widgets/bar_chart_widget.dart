@@ -105,21 +105,36 @@ class BarChartWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          children: [
-            for (int i = 0; i < data.length; i++)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                      width: 12, height: 12, color: colors[i % colors.length]),
-                  const SizedBox(width: 4),
-                  Text(data[i]['name'].toString(),
-                      style: const TextStyle(fontSize: 12)),
-                ],
-              ),
-          ],
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              for (int i = 0; i < data.length; i++)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                        width: 12,
+                        height: 12,
+                        color: colors[i % colors.length]),
+                    const SizedBox(width: 4),
+                    Text(data[i]['name'].toString(),
+                        style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+            ],
+          ),
         ),
       ],
     );
