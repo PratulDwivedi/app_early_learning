@@ -65,14 +65,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     _selectedMode = _evaluationModes[0];
   }
 
-  void _startEvaluation() {
-    if (_selectedMode.isEmpty) {
-      AppSnackbarService.error('Please select an evaluation mode');
-      return;
-    }
-    setState(() => _isStarted = true);
-  }
-
   void _nextQuestion() {
     if (_currentQuestionIndex < _mockQuestions.length - 1) {
       setState(() {
@@ -209,8 +201,16 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                 width: cardWidth,
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(14),
-                                  onTap: () =>
-                                      setState(() => _selectedMode = mode),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedMode = mode;
+                                      _isStarted = true;
+                                      _currentQuestionIndex = 0;
+                                      _selectedOption = null;
+                                      _recordedAnswerPath = null;
+                                      _isRecording = false;
+                                    });
+                                  },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 180),
                                     padding: const EdgeInsets.all(16),
@@ -258,12 +258,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                           );
                         },
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    CustomPrimaryButton(
-                      label: 'Start Evaluation',
-                      onPressed: _startEvaluation,
-                      primaryColor: primaryColor,
                     ),
                   ] else ...[
                     // Question Display
@@ -338,8 +332,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                             children: List.generate(
                               options.length,
                               (index) {
-                                final optionColor =
-                                    optionPalette[index % optionPalette.length];
+                                final optionColor = index.isEven
+                                    ? primaryColor
+                                    : optionPalette[index % optionPalette.length];
                                 final isSelected =
                                     _selectedOption == options[index];
                                 return Padding(
