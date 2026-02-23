@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../config/app_assets.dart';
 import '../../common/services/app_snackbar_service.dart';
-import '../../common/widgets/asset_image.dart';
+import '../../common/widgets/app_logo_badge.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
@@ -102,25 +101,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo Section
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colors.cardColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: AppImage(
-                      AppAssets.logo,
-                      width: 60,
-                      height: 60,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  AppLogoBadge(
+                    backgroundColor: colors.cardColor,
                   ),
                   const SizedBox(height: 30),
 
