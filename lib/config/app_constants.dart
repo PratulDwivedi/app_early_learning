@@ -33,6 +33,8 @@ class AppPageRoute {
   static const String feedback = 'feedback';
   static const String guardians = 'guardians';
   static const String reports = 'reports';
+  static const String uploadQuestions = 'uploadQuestions';
+  static const String offlineSync = 'offlineSync';
 }
 
 class AppPageIds {

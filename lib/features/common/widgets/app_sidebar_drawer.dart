@@ -137,6 +137,39 @@ class AppSidebarDrawer extends ConsumerWidget {
                       );
                     },
                   ),
+                  if (currentUser?.data.isAdmin == true)
+                    _DrawerMenuItem(
+                      icon: Icons.upload_file_rounded,
+                      iconColor: primaryColor,
+                      title: 'Upload Questions',
+                      onTap: () {
+                        Navigator.pop(context);
+                        final screenArgsModel = ScreenArgsModel(
+                          routeName: AppPageRoute.uploadQuestions,
+                          name: 'Upload Questions',
+                        );
+                        NavigationService.navigateTo(
+                          screenArgsModel.routeName,
+                          arguments: screenArgsModel,
+                        );
+                      },
+                    ),
+                  _DrawerMenuItem(
+                    icon: Icons.sync_alt_rounded,
+                    iconColor: primaryColor,
+                    title: 'Offline/Sync',
+                    onTap: () {
+                      Navigator.pop(context);
+                      final screenArgsModel = ScreenArgsModel(
+                        routeName: AppPageRoute.offlineSync,
+                        name: 'Offline/Sync',
+                      );
+                      NavigationService.navigateTo(
+                        screenArgsModel.routeName,
+                        arguments: screenArgsModel,
+                      );
+                    },
+                  ),
 
                   Divider(height: 32, thickness: 1, color: colors.hintColor),
                   _DrawerMenuItem(
