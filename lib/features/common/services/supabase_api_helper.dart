@@ -23,12 +23,20 @@ class SupabaseApiHelper {
 
     final accessToken = prefs.getString('access_token');
 
+    // return {
+    //   'Content-Type': 'application/json',
+    //   'Content-Profile': schema, // Supabase schema
+    //   'apikey': appConfig.localKey,
+    //   if (accessToken != null && accessToken.isNotEmpty)
+    //     'Authorization': 'Bearer $accessToken',
+    // };
+
     return {
       'Content-Type': 'application/json',
-      'Content-Profile': schema, // Supabase schema
-      'apikey': appConfig.localKey,
-      if (accessToken != null && accessToken.isNotEmpty)
-        'Authorization': 'Bearer $accessToken',
+      'Content-Profile': schema,
+      'apikey': appConfig.localKey, // ← is this your anon key?
+      'Authorization':
+          'Bearer ${accessToken ?? appConfig.localKey}', // ← fallback to anon key if no token
     };
   }
 
@@ -158,7 +166,13 @@ class SupabaseApiHelper {
   ) async {
     String functionName = route.trim().split('.').last;
 
-    final headers = await httpHeader(route);
+    final headers = {
+      'Content-Type': 'application/json',
+      'apikey': appConfig.localKey, // ← is this your anon key?
+      'Authorization':
+          'Bearer ${appConfig.localKey}', // ← fallback to anon key if no token
+    };
+
     Uri uri = Uri.parse('${appConfig.apiBaseUrl}/functions/v1/$functionName');
     final firstResponse = await http.post(
       uri,
