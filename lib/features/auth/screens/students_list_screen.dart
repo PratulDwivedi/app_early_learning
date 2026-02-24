@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/services/navigation_service.dart';
@@ -81,6 +82,29 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
       if (!mounted) return;
       NavigationService.clearAndNavigate('login');
     });
+  }
+
+  bool _shouldUseMultiColumnLayout(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final isTablet = mediaQuery.size.shortestSide >= 600;
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    return kIsWeb || isTablet || isLandscape;
+  }
+
+  int _gridCrossAxisCount(BuildContext context) {
+    if (!_shouldUseMultiColumnLayout(context)) return 1;
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1400) return 4;
+    if (width >= 1000) return 3;
+    return 2;
+  }
+
+  double _studentCardAspectRatio(BuildContext context, int crossAxisCount) {
+    if (crossAxisCount == 1) return 2.9;
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1400) return 2.6;
+    if (width >= 1000) return 2.4;
+    return 2.3;
   }
 
   @override
@@ -233,21 +257,33 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                 );
               }
 
+              final crossAxisCount = _gridCrossAxisCount(context);
               return Column(
                 children: [
-                  ListView.builder(
+                  GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: filteredStudents.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: _studentCardAspectRatio(
+                        context,
+                        crossAxisCount,
+                      ),
+                    ),
                     itemBuilder: (context, index) {
                       final student = filteredStudents[index];
                       final firstName = student['first_name'] ?? 'Unknown';
                       final lastName = student['last_name'] ?? '';
                       final grade = student['grade'] ?? '-';
-                      final email = student['email'];
+                      final email = student['email'] ?? '';
+                      final avatarLetter = firstName.toString().isNotEmpty
+                          ? firstName.toString()[0].toUpperCase()
+                          : 'S';
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: colors.cardColor,
@@ -273,7 +309,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                               ),
                               child: Center(
                                 child: Text(
-                                  firstName[0],
+                                  avatarLetter,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -297,7 +333,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                                   ),
 
                                   Text(
-                                    email,
+                                    email.toString(),
                                     style: TextStyle(
                                       color: colors.hintColor,
                                       fontWeight: FontWeight.bold,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/widgets/app_logo_badge.dart';
@@ -86,10 +87,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     }
   }
 
+  bool _shouldUseMultiColumnLayout(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final isTablet = mediaQuery.size.shortestSide >= 600;
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    return kIsWeb || isTablet || isLandscape;
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
+    final useMultiColumn = _shouldUseMultiColumnLayout(context);
 
     return Scaffold(
       backgroundColor: colors.bgColor,
@@ -158,36 +167,52 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Username Field
-                          NameTextFormField(
-                            controller: _userNameController,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                          ),
-                          const SizedBox(height: 20),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final fieldWidth = useMultiColumn
+                                  ? (constraints.maxWidth - 16) / 2
+                                  : constraints.maxWidth;
 
-                          // Email Field
-                          EmailTextFormField(
-                            controller: _emailController,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Password Field
-                          PasswordTextFormField(
-                            controller: _passwordController,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Confirm Password Field
-                          PasswordTextFormField(
-                            controller: _confirmPasswordController,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            labelText: 'Confirm Password',
+                              return Wrap(
+                                spacing: 16,
+                                runSpacing: 20,
+                                children: [
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: NameTextFormField(
+                                      controller: _userNameController,
+                                      colors: colors,
+                                      primaryColor: primaryColor,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: EmailTextFormField(
+                                      controller: _emailController,
+                                      colors: colors,
+                                      primaryColor: primaryColor,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: PasswordTextFormField(
+                                      controller: _passwordController,
+                                      colors: colors,
+                                      primaryColor: primaryColor,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: PasswordTextFormField(
+                                      controller: _confirmPasswordController,
+                                      colors: colors,
+                                      primaryColor: primaryColor,
+                                      labelText: 'Confirm Password',
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
 

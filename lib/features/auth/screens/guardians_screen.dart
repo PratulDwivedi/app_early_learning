@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/providers/student_provider.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
@@ -53,6 +54,29 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  bool _shouldUseMultiColumnLayout(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final isTablet = mediaQuery.size.shortestSide >= 600;
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    return kIsWeb || isTablet || isLandscape;
+  }
+
+  int _gridCrossAxisCount(BuildContext context) {
+    if (!_shouldUseMultiColumnLayout(context)) return 1;
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1400) return 4;
+    if (width >= 1000) return 3;
+    return 2;
+  }
+
+  double _guardianCardAspectRatio(BuildContext context, int crossAxisCount) {
+    if (crossAxisCount == 1) return 3.4;
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1400) return 3.2;
+    if (width >= 1000) return 3.0;
+    return 2.9;
   }
 
   @override
@@ -152,89 +176,99 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                   );
                 }
 
-                return ListView.builder(
+                final crossAxisCount = _gridCrossAxisCount(context);
+                return GridView.builder(
                   itemCount: filteredGuardians.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: _guardianCardAspectRatio(
+                      context,
+                      crossAxisCount,
+                    ),
+                  ),
                   itemBuilder: (context, index) {
                     final guardian = filteredGuardians[index];
                     final firstName = guardian.fullName.isNotEmpty
                         ? guardian.fullName.split(' ').first
                         : 'G';
+                    final avatarLetter = firstName.isNotEmpty
+                        ? firstName[0].toUpperCase()
+                        : 'G';
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: colors.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: primaryColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: colors.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: primaryColor.withOpacity(0.3),
+                          width: 1,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      primaryColor.withOpacity(0.8),
-                                      primaryColor,
-                                    ],
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    firstName[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      guardian.fullName,
-                                      style: TextStyle(
-                                        color: colors.textColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      guardian.email,
-                                      style: TextStyle(
-                                        color: colors.hintColor,
-                                        fontSize: 12,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    primaryColor.withOpacity(0.8),
+                                    primaryColor,
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Center(
+                                child: Text(
+                                  avatarLetter,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    guardian.fullName,
+                                    style: TextStyle(
+                                      color: colors.textColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    guardian.email,
+                                    style: TextStyle(
+                                      color: colors.hintColor,
+                                      fontSize: 12,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );

@@ -166,6 +166,7 @@ class SupabaseApiHelper {
   ) async {
     String functionName = route.trim().split('.').last;
 
+    // Dont pass content-profile for edge functions, as they are not tied to a specific schema
     final headers = {
       'Content-Type': 'application/json',
       'apikey': appConfig.localKey, // ← is this your anon key?
