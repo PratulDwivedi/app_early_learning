@@ -2,6 +2,7 @@ import 'package:app_early_learning/features/auth/screens/feedback_screen.dart';
 import 'package:app_early_learning/features/auth/screens/student_screen.dart';
 import 'package:app_early_learning/features/auth/screens/students_list_screen.dart';
 import 'package:app_early_learning/features/auth/screens/question_screen.dart';
+import 'package:app_early_learning/features/auth/screens/question_list_screen.dart';
 import 'package:app_early_learning/features/auth/screens/evaluation_screen.dart';
 import 'package:app_early_learning/features/auth/screens/speech_settings_screen.dart';
 import 'package:app_early_learning/features/auth/screens/guardians_screen.dart';
@@ -27,9 +28,12 @@ class NavigationService {
     'home': (context) => const EduHomeScreen(),
   };
 
-  static void navigateTo(String routeName, {Object? arguments}) {
+  static Future<dynamic>? navigateTo(String routeName, {Object? arguments}) {
     if (_routes.containsKey(routeName)) {
-      navigatorKey.currentState?.pushNamed(routeName, arguments: arguments);
+      return navigatorKey.currentState?.pushNamed(
+        routeName,
+        arguments: arguments,
+      );
     } else {
       ScreenArgsModel args;
       if (arguments is ScreenArgsModel) {
@@ -46,88 +50,81 @@ class NavigationService {
 
       switch (routeName) {
         case AppPageRoute.webview:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(builder: (context) => WebViewScreen(args: args)),
           );
-          break;
         case AppPageRoute.changePassword:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => ChangePasswordScreen(args: args),
             ),
           );
-          break;
         case AppPageRoute.feedback:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(builder: (context) => FeedbackScreen(args: args)),
           );
-          break;
         case AppPageRoute.addstudent:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const StudentPage(),
             ),
           );
-          break;
         case AppPageRoute.addquestion:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
-              builder: (context) => const QuestionPage(),
+              builder: (context) => QuestionPage(args: args),
             ),
           );
-          break;
+        case AppPageRoute.questions:
+          return navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const QuestionListScreen(),
+            ),
+          );
         case AppPageRoute.evaluation:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const EvaluationScreen(),
             ),
           );
-          break;
         case AppPageRoute.speechSettings:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const SpeechSettingsScreen(),
             ),
           );
-          break;
         case AppPageRoute.students:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const StudentsListScreen(),
             ),
           );
-          break;
         case AppPageRoute.guardians:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => const GuardiansScreen(),
             ),
           );
-          break;
         case AppPageRoute.reports:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => StudentReportScreen(args: arguments is ScreenArgsModel ? arguments : null),
             ),
           );
-          break;
         case AppPageRoute.uploadQuestions:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => UploadQuestionsScreen(args: args),
             ),
           );
-          break;
         case AppPageRoute.offlineSync:
-          navigatorKey.currentState?.push(
+          return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => OfflineSyncScreen(args: args),
             ),
           );
-          break;
         default:
-          // Handle unknown routes or do nothing
-          break;
+          return null;
       }
     }
   }
@@ -152,11 +149,11 @@ class NavigationService {
     );
   }
 
-  static void navigate(String routeName, {Object? arguments}) {
-    navigateTo(routeName, arguments: arguments);
+  static Future<dynamic>? navigate(String routeName, {Object? arguments}) {
+    return navigateTo(routeName, arguments: arguments);
   }
 
-  static void goBack() {
-    navigatorKey.currentState?.pop();
+  static void goBack({Object? result}) {
+    navigatorKey.currentState?.pop(result);
   }
 }

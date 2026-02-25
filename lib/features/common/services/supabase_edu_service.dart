@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 import '../../../config/app_constants.dart';
 import '../models/response_message_model.dart';
 import '../models/student_model.dart';
-import '../models/question_model.dart';
 import 'supabase_api_helper.dart';
 import 'edu_service.dart';
 
@@ -62,13 +61,11 @@ class SupabaseEduService implements EduService {
   }
 
   @override
-  Future<ResponseMessageModel> saveQuestion(Question question) async {
+  Future<ResponseMessageModel> saveQuestion(Map<String, dynamic> payload) async {
     developer.log(
-      'saveQuestion called with: questionText=${question.questionText}, questionMode=${question.questionMode}, difficulty=${question.difficulty}',
+      'saveQuestion called',
       name: 'QuestionService',
     );
-
-    final payload = question.toJson();
 
     developer.log(
       'API Payload: $payload',
@@ -116,6 +113,15 @@ class SupabaseEduService implements EduService {
   @override
   Future<ResponseMessageModel> getQuestions() async {
     final response = await SupabaseApiHelper.post(ApiRoutes.getQuestions, null);
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> getQuestionTypes() async {
+    final response = await SupabaseApiHelper.post(
+      ApiRoutes.getQuestionTypes,
+      null,
+    );
     return response;
   }
 

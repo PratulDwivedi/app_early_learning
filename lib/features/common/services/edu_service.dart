@@ -2,7 +2,6 @@ import 'supabase_edu_service.dart';
 import '../../../config/app_config.dart';
 import '../models/response_message_model.dart';
 import '../models/student_model.dart';
-import '../models/question_model.dart';
 
 abstract class EduService {
   static EduService get instance {
@@ -17,11 +16,11 @@ abstract class EduService {
   Future<ResponseMessageModel> getHtmlContent(int pageId);
   Future<ResponseMessageModel> saveStudent(Student student);
   Future<ResponseMessageModel> getStudents();
-  Future<ResponseMessageModel> saveQuestion(Question question);
+  Future<ResponseMessageModel> saveQuestion(Map<String, dynamic> payload);
   Future<ResponseMessageModel> saveQuestions(
     List<Map<String, dynamic>> questions,
   );
   Future<ResponseMessageModel> getQuestions();
+  Future<ResponseMessageModel> getQuestionTypes();
   Future<ResponseMessageModel> getGuardians();
-  
 }

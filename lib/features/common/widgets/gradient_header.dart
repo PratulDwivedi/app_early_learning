@@ -199,18 +199,36 @@ class GradientHeader extends ConsumerWidget {
                           ),
                         ),
                       if (currentUser.data.isAdmin == true)
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            NavigationService.navigateTo(
-                              AppPageRoute.addquestion,
-                            );
-                          },
-                          icon: const Icon(Icons.add_circle_outline),
-                          label: const Text('Add Question'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.9),
-                            foregroundColor: primaryColor,
-                          ),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                NavigationService.navigateTo(
+                                  AppPageRoute.addquestion,
+                                );
+                              },
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: const Text('Add Question'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.9),
+                                foregroundColor: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                NavigationService.navigateTo(
+                                  AppPageRoute.questions,
+                                );
+                              },
+                              icon: const Icon(Icons.list_alt_rounded),
+                              label: const Text('Questions'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.9),
+                                foregroundColor: primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),

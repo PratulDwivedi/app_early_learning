@@ -1,10 +1,43 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/question_model.dart';
+import '../models/response_message_model.dart';
 import '../services/edu_service.dart';
 
 // Service Provider
 final eduServiceProvider = Provider<EduService>((ref) {
   return EduService.instance;
+});
+
+final getQuestionsProvider = FutureProvider.autoDispose<ResponseMessageModel>((
+  ref,
+) async {
+  final service = ref.watch(eduServiceProvider);
+  return service.getQuestions();
+});
+
+final getQuestionTypesProvider =
+    FutureProvider.autoDispose<ResponseMessageModel>((ref) async {
+  final service = ref.watch(eduServiceProvider);
+  return service.getQuestionTypes();
+});
+
+final questionByIdProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>?, int>((
+  ref,
+  questionId,
+) async {
+  final service = ref.watch(eduServiceProvider);
+  final response = await service.getQuestions();
+  if (!response.isSuccess) return null;
+
+  for (final q in response.data) {
+    final id = q['id'];
+    final parsedId = id is int ? id : int.tryParse(id?.toString() ?? '');
+    if (parsedId == questionId) {
+      return q;
+    }
+  }
+  return null;
 });
 
 // Question Form State Notifier

@@ -9,6 +9,7 @@ class ApiRoutes {
   static const String addquestion = 'edu.fn_save_question';
   static const String savequestions = 'edu.fn_save_questions';
   static const String getQuestions = 'edu.fn_get_questions';
+  static const String getQuestionTypes = 'edu.fn_get_question_types';
   static const String updatePassword = 'edu.fn_update_delegate_password';
   static const String updateProfilePic = 'edu.fn_update_delegate_profile_pic';
   static const String uploadFile = 'edu/v1/upload-file';
