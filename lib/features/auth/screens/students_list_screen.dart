@@ -349,8 +349,20 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                                           Text('View / Edit'),
                                         ],
                                       ),
-                                      onTap: () {
-                                        // TODO: Implement edit student
+                                      onTap: () async {
+                                        final args = ScreenArgsModel(
+                                          routeName: AppPageRoute.addstudent,
+                                          name: 'Edit Kid',
+                                          data: student,
+                                        );
+                                        final updated =
+                                            await NavigationService.navigateTo(
+                                          args.routeName,
+                                          arguments: args,
+                                        );
+                                        if (updated == true) {
+                                          ref.invalidate(getStudentsProvider);
+                                        }
                                       },
                                     ),
                                     PopupMenuItem(

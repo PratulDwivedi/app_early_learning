@@ -66,7 +66,7 @@ class NavigationService {
         case AppPageRoute.addstudent:
           return navigatorKey.currentState?.push(
             MaterialPageRoute(
-              builder: (context) => const StudentPage(),
+              builder: (context) => StudentPage(args: args),
             ),
           );
         case AppPageRoute.addquestion:

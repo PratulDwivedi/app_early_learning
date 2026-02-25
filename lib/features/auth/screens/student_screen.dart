@@ -9,10 +9,13 @@ import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
 import '../providers/auth_service_provider.dart';
 import '../../common/providers/student_provider.dart';
+import '../../common/models/screen_args_model.dart';
 import '../../common/models/student_model.dart';
 
 class StudentPage extends ConsumerStatefulWidget {
-  const StudentPage({super.key});
+  final ScreenArgsModel? args;
+
+  const StudentPage({super.key, this.args});
 
   @override
   ConsumerState<StudentPage> createState() => _StudentPageState();
@@ -25,6 +28,21 @@ class _StudentPageState extends ConsumerState<StudentPage> {
   final _gradeController = TextEditingController();
   final _dobController = TextEditingController();
   bool _isLoading = false;
+  int? _editingId;
+
+  bool get _isEditing => _editingId != null;
+
+  int? _tryParseInt(dynamic value) {
+    if (value is int) return value;
+    if (value == null) return null;
+    return int.tryParse(value.toString());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillIfEditing();
+  }
 
   @override
   void dispose() {
@@ -59,6 +77,7 @@ class _StudentPageState extends ConsumerState<StudentPage> {
       // Build Student directly from form controllers (simplest approach)
       final grade = int.tryParse(_gradeController.text);
       final student = Student(
+        id: _editingId,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         grade: grade,
@@ -76,7 +95,11 @@ class _StudentPageState extends ConsumerState<StudentPage> {
 
       if (mounted) {
         if (result.isSuccess) {
-          AppSnackbarService.success('Student added successfully!');
+          AppSnackbarService.success(
+            _isEditing
+                ? 'Student updated successfully!'
+                : 'Student added successfully!',
+          );
           ref.read(studentFormProvider.notifier).reset();
           _firstNameController.clear();
           _lastNameController.clear();
@@ -84,7 +107,7 @@ class _StudentPageState extends ConsumerState<StudentPage> {
           _dobController.clear();
           // Invalidate students list so UI refreshes
           ref.invalidate(getStudentsProvider);
-          NavigationService.goBack();
+          NavigationService.goBack(result: true);
         } else {
           AppSnackbarService.error(result.message);
         }
@@ -113,7 +136,7 @@ class _StudentPageState extends ConsumerState<StudentPage> {
           children: [
             // Gradient Header
             CommonGradientHeader(
-              title: 'Kid',
+              title: _isEditing ? 'Edit Kid' : 'Kid',
               onRefresh: () {
                 ref.invalidate(authInitializerProvider);
               },
@@ -278,7 +301,9 @@ class _StudentPageState extends ConsumerState<StudentPage> {
 
                     // Submit Button
                     CustomPrimaryButton(
-                      label: _isLoading ? 'Saving...' : 'Save',
+                      label: _isLoading
+                          ? 'Saving...'
+                          : (_isEditing ? 'Update' : 'Save'),
                       onPressed: _isLoading ? null : _submitForm,
                       isLoading: _isLoading,
                       primaryColor: primaryColor,
@@ -304,5 +329,19 @@ class _StudentPageState extends ConsumerState<StudentPage> {
         ),
       ),
     );
+  }
+
+  void _prefillIfEditing() {
+    final data = widget.args?.data;
+    if (data == null || data.isEmpty) return;
+
+    _editingId = _tryParseInt(data['id'] ?? data['p_id']);
+    _firstNameController.text = (data['first_name'] ?? data['p_first_name'] ?? '')
+        .toString();
+    _lastNameController.text = (data['last_name'] ?? data['p_last_name'] ?? '')
+        .toString();
+    final grade = data['grade'] ?? data['p_grade'];
+    _gradeController.text = grade == null ? '' : grade.toString();
+    _dobController.text = (data['dob'] ?? data['p_dob'] ?? '').toString();
   }
 }
