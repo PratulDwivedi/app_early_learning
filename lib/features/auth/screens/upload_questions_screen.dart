@@ -4,7 +4,6 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../common/models/question_model.dart';
 import '../../common/models/screen_args_model.dart';
 import '../../common/providers/student_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
@@ -41,22 +40,7 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
         child: Column(
           children: [
             CommonGradientHeader(title: widget.args.name),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  //border: Border.all(color: Colors.orange.withOpacity(0.4)),
-                ),
-                child: const Text(
-                  'Staging Feature: Bulk upload is under construction. Current version supports CSV and basic Excel preview/import.',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
+            const SizedBox(height: 10),
             if (!isAdminUser)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -96,7 +80,7 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'question_text (required), question_mode, options_csv, correct_answer, display_letter, hint, difficulty, sort_order, question_set_id',
+                        'name or question_text (required), question_type_id, name_audio_prompt, options/options_csv, options_audio_prompt, correct_answer, hint, image_url, sort_order, difficulty, points',
                         style: TextStyle(color: colors.hintColor, fontSize: 12),
                       ),
                       const SizedBox(height: 16),
@@ -174,15 +158,17 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
                               child: SingleChildScrollView(
                                 child: DataTable(
                                   columns: _headers
-                                      .map((header) => DataColumn(
-                                            label: Text(
-                                              header,
-                                              style: TextStyle(
-                                                color: colors.textColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                      .map(
+                                        (header) => DataColumn(
+                                          label: Text(
+                                            header,
+                                            style: TextStyle(
+                                              color: colors.textColor,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                          ))
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
                                   rows: _rows
                                       .map(
@@ -271,7 +257,7 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
 
       if (parsed.headers.isEmpty || parsed.rows.isEmpty) {
         AppSnackbarService.error(
-          'No valid rows found. Ensure required column `question_text` is present.',
+          'No valid rows found. Ensure `name` or `question_text` is present.',
         );
         return;
       }
@@ -302,10 +288,9 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
       return const ParsedTable(headers: [], rows: []);
     }
 
-    final headers = _parseCsvLine(lines.first)
-        .map(_normalizeHeader)
-        .where((h) => h.isNotEmpty)
-        .toList();
+    final headers = _parseCsvLine(
+      lines.first,
+    ).map(_normalizeHeader).where((h) => h.isNotEmpty).toList();
 
     final rows = <Map<String, String>>[];
     for (int i = 1; i < lines.length; i++) {
@@ -318,7 +303,7 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
       for (int j = 0; j < headers.length; j++) {
         row[headers[j]] = j < fields.length ? fields[j].trim() : '';
       }
-      if ((row['question_text'] ?? '').trim().isNotEmpty) {
+      if (_rowHasQuestionText(row)) {
         rows.add(row);
       }
     }
@@ -358,7 +343,7 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
     }
 
     final sheet = excel.tables.values.first;
-    if (sheet == null || sheet.rows.isEmpty) {
+    if (sheet.rows.isEmpty) {
       return const ParsedTable(headers: [], rows: []);
     }
 
@@ -372,10 +357,11 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
       final excelRow = sheet.rows[i];
       final row = <String, String>{};
       for (int j = 0; j < headers.length; j++) {
-        row[headers[j]] =
-            j < excelRow.length ? (excelRow[j]?.value?.toString() ?? '') : '';
+        row[headers[j]] = j < excelRow.length
+            ? (excelRow[j]?.value?.toString() ?? '')
+            : '';
       }
-      if ((row['question_text'] ?? '').trim().isNotEmpty) {
+      if (_rowHasQuestionText(row)) {
         rows.add(row);
       }
     }
@@ -387,6 +373,56 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
     return header.trim().toLowerCase().replaceAll(' ', '_');
   }
 
+  bool _rowHasQuestionText(Map<String, String> row) {
+    return (row['name'] ?? '').trim().isNotEmpty ||
+        (row['question_text'] ?? '').trim().isNotEmpty;
+  }
+
+  int _parseIntOrDefault(String? value, int defaultValue) {
+    return int.tryParse((value ?? '').trim()) ?? defaultValue;
+  }
+
+  String? _readNonEmpty(Map<String, String> row, List<String> keys) {
+    for (final key in keys) {
+      final value = (row[key] ?? '').trim();
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _toRpcQuestion(Map<String, String> row, int index) {
+    final name =
+        _readNonEmpty(row, ['name', 'question_text', 'question']) ?? '';
+    final options =
+        _readNonEmpty(row, ['options', 'options_csv', 'choices']) ?? '';
+    final difficulty =
+        _readNonEmpty(row, ['difficulty'])?.toLowerCase() ?? 'easy';
+    final points = _parseIntOrDefault(row['points'], 10);
+    final sortOrder = _parseIntOrDefault(row['sort_order'], index + 1);
+    final questionTypeId = _parseIntOrDefault(row['question_type_id'], 1);
+    final nameAudioPrompt = _readNonEmpty(row, ['name_audio_prompt']);
+    final optionsAudioPrompt = _readNonEmpty(row, ['options_audio_prompt']);
+    final correctAnswer = _readNonEmpty(row, ['correct_answer']) ?? '';
+    final hint = _readNonEmpty(row, ['hint']);
+    final imageUrl = _readNonEmpty(row, ['image_url']);
+
+    return {
+      'question_type_id': questionTypeId,
+      'name': name,
+      if (nameAudioPrompt != null) 'name_audio_prompt': nameAudioPrompt,
+      'options': options,
+      if (optionsAudioPrompt != null)
+        'options_audio_prompt': optionsAudioPrompt,
+      'correct_answer': correctAnswer,
+      if (hint != null) 'hint': hint,
+      if (imageUrl != null) 'image_url': imageUrl,
+      'sort_order': sortOrder,
+      'data': {'difficulty': difficulty, 'points': points},
+    };
+  }
+
   Future<void> _submitQuestions() async {
     if (_rows.isEmpty) {
       AppSnackbarService.error('No data to submit.');
@@ -394,51 +430,29 @@ class _UploadQuestionsScreenState extends ConsumerState<UploadQuestionsScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    int successCount = 0;
-    int failCount = 0;
-    String? firstError;
-
     try {
       final service = ref.read(eduServiceProvider);
-      for (final row in _rows) {
-        final question = Question(
-          questionText: (row['question_text'] ?? '').trim(),
-          questionMode:
-              (row['question_mode'] ?? 'LETTER_SOUND_MCQ').trim().isEmpty
-                  ? 'LETTER_SOUND_MCQ'
-                  : (row['question_mode'] ?? 'LETTER_SOUND_MCQ').trim(),
-          optionsCsv: (row['options_csv'] ?? '').trim().isEmpty
-              ? null
-              : row['options_csv']!.trim(),
-          correctAnswer: (row['correct_answer'] ?? '').trim().isEmpty
-              ? null
-              : row['correct_answer']!.trim(),
-          displayLetter: (row['display_letter'] ?? '').trim().isEmpty
-              ? null
-              : row['display_letter']!.trim(),
-          hint: (row['hint'] ?? '').trim().isEmpty ? null : row['hint']!.trim(),
-          difficulty: int.tryParse((row['difficulty'] ?? '1').trim()) ?? 1,
-          sortOrder: int.tryParse((row['sort_order'] ?? '0').trim()) ?? 0,
-          questionSetId: int.tryParse((row['question_set_id'] ?? '').trim()),
-        );
-
-        final response = await service.saveQuestion(question);
-        if (response.isSuccess) {
-          successCount++;
-        } else {
-          failCount++;
-          firstError ??= response.message;
+      final rpcQuestions = <Map<String, dynamic>>[];
+      for (int i = 0; i < _rows.length; i++) {
+        if (_rowHasQuestionText(_rows[i])) {
+          rpcQuestions.add(_toRpcQuestion(_rows[i], i));
         }
       }
 
-      if (failCount == 0) {
+      if (rpcQuestions.isEmpty) {
+        AppSnackbarService.error(
+          'No valid questions found. Ensure each row has `name` or `question_text`.',
+        );
+        return;
+      }
+
+      final response = await service.saveQuestions(rpcQuestions);
+      if (response.isSuccess) {
         AppSnackbarService.success(
-          'Uploaded $successCount questions successfully.',
+          'Uploaded ${rpcQuestions.length} questions successfully.',
         );
       } else {
-        AppSnackbarService.error(
-          'Uploaded: $successCount, Failed: $failCount. ${firstError ?? ''}',
-        );
+        AppSnackbarService.error('Upload failed: ${response.message}');
       }
     } catch (e) {
       AppSnackbarService.error('Submit failed: $e');

@@ -86,6 +86,34 @@ class SupabaseEduService implements EduService {
   }
 
   @override
+  Future<ResponseMessageModel> saveQuestions(
+    List<Map<String, dynamic>> questions,
+  ) async {
+    final payload = {'p_questions': questions};
+
+    developer.log(
+      'saveQuestions called with ${questions.length} questions',
+      name: 'QuestionService',
+    );
+    developer.log(
+      'API Payload: $payload',
+      name: 'QuestionService',
+    );
+
+    final response = await SupabaseApiHelper.post(
+      ApiRoutes.savequestions,
+      payload,
+    );
+
+    developer.log(
+      'API Response: isSuccess=${response.isSuccess}, message=${response.message}, statusCode=${response.statusCode}',
+      name: 'QuestionService',
+    );
+
+    return response;
+  }
+
+  @override
   Future<ResponseMessageModel> getQuestions() async {
     final response = await SupabaseApiHelper.post(ApiRoutes.getQuestions, null);
     return response;

@@ -18,6 +18,9 @@ abstract class EduService {
   Future<ResponseMessageModel> saveStudent(Student student);
   Future<ResponseMessageModel> getStudents();
   Future<ResponseMessageModel> saveQuestion(Question question);
+  Future<ResponseMessageModel> saveQuestions(
+    List<Map<String, dynamic>> questions,
+  );
   Future<ResponseMessageModel> getQuestions();
   Future<ResponseMessageModel> getGuardians();
   
