@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_constants.dart';
 import '../models/screen_args_model.dart';
 import '../services/navigation_service.dart';
+import '../../auth/providers/auth_service_provider.dart';
 import '../../auth/providers/theme_provider.dart';
 
 class BottomNavBar extends ConsumerWidget {
@@ -11,11 +12,14 @@ class BottomNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = ref.watch(themeColorsProvider);
-    
+    final isAdminUser = ref.watch(authProvider)?.data.isAdmin == true;
+
     return Container(
       decoration: BoxDecoration(
         color: colors.cardColor,
-        border: Border(top: BorderSide(color: colors.hintColor.withOpacity(0.2))),
+        border: Border(
+          top: BorderSide(color: colors.hintColor.withOpacity(0.2)),
+        ),
       ),
       child: SafeArea(
         child: Padding(
@@ -39,7 +43,7 @@ class BottomNavBar extends ConsumerWidget {
                   );
                 },
               ),
-               _NavItem(
+              _NavItem(
                 icon: Icons.home,
                 label: 'Home',
                 isActive: true,
@@ -55,22 +59,23 @@ class BottomNavBar extends ConsumerWidget {
                   );
                 },
               ),
-              _NavItem(
-                icon: Icons.people_sharp,
-                label: 'Guardians',
-                isActive: false,
-                onTap: () {
-                  ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                    routeName: AppPageRoute.guardians,
-                    name: "Guardians",
-                    data: {},
-                  );
-                  NavigationService.navigateTo(
-                    screenArgsModel.routeName,
-                    arguments: screenArgsModel,
-                  );
-                },
-              ),
+              if (isAdminUser)
+                _NavItem(
+                  icon: Icons.people_sharp,
+                  label: 'Guardians',
+                  isActive: false,
+                  onTap: () {
+                    ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                      routeName: AppPageRoute.guardians,
+                      name: "Guardians",
+                      data: {},
+                    );
+                    NavigationService.navigateTo(
+                      screenArgsModel.routeName,
+                      arguments: screenArgsModel,
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -96,7 +101,7 @@ class _NavItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = ref.watch(themeColorsProvider);
     final primaryColor = ref.watch(primaryColorProvider);
-    
+
     return InkWell(
       onTap: onTap,
       child: Stack(

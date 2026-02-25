@@ -6,11 +6,36 @@ import '../widgets/bottom_nav_bar.dart';
 import '../widgets/gradient_header.dart';
 import '../../auth/screens/students_list_screen.dart';
 
-class EduHomeScreen extends ConsumerWidget {
+class EduHomeScreen extends ConsumerStatefulWidget {
   const EduHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EduHomeScreen> createState() => _EduHomeScreenState();
+}
+
+class _EduHomeScreenState extends ConsumerState<EduHomeScreen> {
+  late final TextEditingController _searchController;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = ref.watch(themeColorsProvider);
 
     return Container(
@@ -21,7 +46,9 @@ class EduHomeScreen extends ConsumerWidget {
         body: SafeArea(
           child: Column(
             children: [
-              const GradientHeader(),
+              GradientHeader(
+                searchController: _searchController,
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
@@ -29,7 +56,7 @@ class EduHomeScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                          const StudentsListView(),
+                        StudentsListView(searchQuery: _searchQuery),
                       ],
                     ),
                   ),

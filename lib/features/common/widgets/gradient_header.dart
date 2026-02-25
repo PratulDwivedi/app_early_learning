@@ -8,7 +8,12 @@ import 'app_logo_badge.dart';
 import 'theme_selector.dart';
 
 class GradientHeader extends ConsumerWidget {
-  const GradientHeader({super.key});
+  final TextEditingController? searchController;
+
+  const GradientHeader({
+    super.key,
+    this.searchController,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,6 +79,32 @@ class GradientHeader extends ConsumerWidget {
                         backgroundColor: Colors.white.withOpacity(0.2),
                       ),
                     ),
+                    if (currentUser?.data.isAdmin == true) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: TextFormField(
+                            controller: searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search students...',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: colors.cardColor,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 8),
                     Row(
                       children: [
                         IconButton(
@@ -153,35 +184,34 @@ class GradientHeader extends ConsumerWidget {
                   ),
                 if (currentUser != null)
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Add Kid Button
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          NavigationService.navigateTo(AppPageRoute.addstudent);
-                        },
-                        icon: const Icon(Icons.person_add),
-                        label: const Text('Add Kid'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.9),
-                          foregroundColor: primaryColor,
+                      if (currentUser.data.isAdmin != true)
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            NavigationService.navigateTo(AppPageRoute.addstudent);
+                          },
+                          icon: const Icon(Icons.person_add),
+                          label: const Text('Add Kid'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.9),
+                            foregroundColor: primaryColor,
+                          ),
                         ),
-                      ),
-                      currentUser.data.isAdmin == true
-                          ? ElevatedButton.icon(
-                              onPressed: () {
-                                NavigationService.navigateTo(
-                                  AppPageRoute.addquestion,
-                                );
-                              },
-                              icon: const Icon(Icons.add_circle_outline),
-                              label: const Text('Add Question'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.9),
-                                foregroundColor: primaryColor,
-                              ),
-                            )
-                          : const SizedBox(),
+                      if (currentUser.data.isAdmin == true)
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            NavigationService.navigateTo(
+                              AppPageRoute.addquestion,
+                            );
+                          },
+                          icon: const Icon(Icons.add_circle_outline),
+                          label: const Text('Add Question'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.9),
+                            foregroundColor: primaryColor,
+                          ),
+                        ),
                     ],
                   ),
                 const SizedBox(height: 20),

@@ -35,33 +35,19 @@ class StudentsListScreen extends ConsumerWidget {
 
 // Reusable students list view (can be embedded in home screen)
 class StudentsListView extends ConsumerStatefulWidget {
-  const StudentsListView({super.key});
+  final String searchQuery;
+
+  const StudentsListView({
+    super.key,
+    this.searchQuery = '',
+  });
 
   @override
   ConsumerState<StudentsListView> createState() => _StudentsListViewState();
 }
 
 class _StudentsListViewState extends ConsumerState<StudentsListView> {
-  late TextEditingController _searchController;
-  String _searchQuery = '';
   bool _isHandlingJwtExpiry = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   bool _isJwtExpiredResponse(ResponseMessageModel response) {
     final message = response.message.toLowerCase();
@@ -112,32 +98,14 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
     final studentsAsync = ref.watch(getStudentsProvider);
+    final isAdminUser = ref.watch(authProvider)?.data.isAdmin == true;
+    final normalizedSearchQuery = widget.searchQuery.toLowerCase();
 
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // search textbox with full width
-          TextFormField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search students...',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: colors.cardColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 0,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
           studentsAsync.when(
             loading: () => Container(
               padding: const EdgeInsets.all(20),
@@ -222,13 +190,13 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                 final firstName = (student['first_name'] ?? '').toLowerCase();
                 final lastName = (student['last_name'] ?? '').toLowerCase();
                 final email = (student['email'] ?? '').toLowerCase();
-                return firstName.contains(_searchQuery) ||
-                    lastName.contains(_searchQuery) ||
-                    email.contains(_searchQuery);
+                return firstName.contains(normalizedSearchQuery) ||
+                    lastName.contains(normalizedSearchQuery) ||
+                    (isAdminUser && email.contains(normalizedSearchQuery));
               }).toList();
 
               // Show no results message if search has results but all filtered out
-              if (filteredStudents.isEmpty && _searchQuery.isNotEmpty) {
+              if (filteredStudents.isEmpty && normalizedSearchQuery.isNotEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -283,135 +251,148 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                           ? firstName.toString()[0].toUpperCase()
                           : 'S';
 
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: colors.cardColor,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: primaryColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    primaryColor.withOpacity(0.8),
-                                    primaryColor,
-                                  ],
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  avatarLetter,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 20,
-                                  ),
-                                ),
+                          onTap: () {
+                            NavigationService.navigateTo(
+                              AppPageRoute.evaluation,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: colors.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: primaryColor.withOpacity(0.3),
+                                width: 1,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$firstName $lastName',
-                                    style: TextStyle(
-                                      color: colors.textColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        primaryColor.withOpacity(0.8),
+                                        primaryColor,
+                                      ],
                                     ),
                                   ),
-
-                                  Text(
-                                    email.toString(),
-                                    style: TextStyle(
-                                      color: colors.hintColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.school_outlined,
-                                        size: 14,
-                                        color: colors.hintColor,
+                                  child: Center(
+                                    child: Text(
+                                      avatarLetter,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
                                       ),
-                                      const SizedBox(width: 4),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        'Grade: $grade',
+                                        '$firstName $lastName',
                                         style: TextStyle(
-                                          color: colors.hintColor,
-                                          fontSize: 12,
+                                          color: colors.textColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
                                         ),
                                       ),
+                                      if (isAdminUser)
+                                        Text(
+                                          email.toString(),
+                                          style: TextStyle(
+                                            color: colors.hintColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.school_outlined,
+                                            size: 14,
+                                            color: colors.hintColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Grade: $grade',
+                                            style: TextStyle(
+                                              color: colors.hintColor,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuButton(
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.edit),
-                                      SizedBox(width: 8),
-                                      Text('View / Edit'),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    // TODO: Implement edit student
-                                  },
                                 ),
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.question_answer),
-                                      SizedBox(width: 8),
-                                      Text('Evaluate'),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    NavigationService.navigateTo(
-                                      AppPageRoute.evaluation,
-                                    );
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.add_chart_rounded),
-                                      SizedBox(width: 8),
-                                      Text('Report Card'),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                                      routeName: AppPageRoute.reports,
-                                      name: '$firstName $lastName - Report Card',
-                                      data: student,
-                                    );
-                                    NavigationService.navigateTo(
-                                      screenArgsModel.routeName,
-                                      arguments: screenArgsModel,
-                                    );
-                                  },
+                                PopupMenuButton(
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.edit),
+                                          SizedBox(width: 8),
+                                          Text('View / Edit'),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        // TODO: Implement edit student
+                                      },
+                                    ),
+                                    PopupMenuItem(
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.question_answer),
+                                          SizedBox(width: 8),
+                                          Text('Evaluate'),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        NavigationService.navigateTo(
+                                          AppPageRoute.evaluation,
+                                        );
+                                      },
+                                    ),
+                                    PopupMenuItem(
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.add_chart_rounded),
+                                          SizedBox(width: 8),
+                                          Text('Report Card'),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        ScreenArgsModel screenArgsModel = ScreenArgsModel(
+                                          routeName: AppPageRoute.reports,
+                                          name:
+                                              '$firstName $lastName - Report Card',
+                                          data: student,
+                                        );
+                                        NavigationService.navigateTo(
+                                          screenArgsModel.routeName,
+                                          arguments: screenArgsModel,
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       );
                     },
