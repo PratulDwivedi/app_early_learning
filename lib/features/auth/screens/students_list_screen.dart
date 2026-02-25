@@ -256,8 +256,14 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () {
+                            final args = ScreenArgsModel(
+                              routeName: AppPageRoute.evaluation,
+                              name: 'Evaluation',
+                              data: student,
+                            );
                             NavigationService.navigateTo(
-                              AppPageRoute.evaluation,
+                              args.routeName,
+                              arguments: args,
                             );
                           },
                           child: Container(
@@ -374,8 +380,14 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                                         ],
                                       ),
                                       onTap: () {
+                                        final args = ScreenArgsModel(
+                                          routeName: AppPageRoute.evaluation,
+                                          name: 'Evaluation',
+                                          data: student,
+                                        );
                                         NavigationService.navigateTo(
-                                          AppPageRoute.evaluation,
+                                          args.routeName,
+                                          arguments: args,
                                         );
                                       },
                                     ),

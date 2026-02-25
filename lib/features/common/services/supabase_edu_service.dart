@@ -126,6 +126,49 @@ class SupabaseEduService implements EduService {
   }
 
   @override
+  Future<ResponseMessageModel> startSession(
+    int studentId,
+    int questionTypeId,
+  ) async {
+    final payload = {
+      'p_student_id': studentId,
+      'p_question_type_id': questionTypeId,
+    };
+    final response = await SupabaseApiHelper.post(ApiRoutes.startSession, payload);
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> submitAnswer(
+    int sessionId,
+    int questionId,
+    dynamic studentAnswer,
+    int timeTakenSec,
+  ) async {
+    final payload = {
+      'p_session_id': sessionId,
+      'p_question_id': questionId,
+      'p_student_answer': studentAnswer,
+      'p_time_taken_sec': timeTakenSec,
+    };
+    final response = await SupabaseApiHelper.post(ApiRoutes.submitAnswer, payload);
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> completeSession(int sessionId, String status) async {
+    final payload = {
+      'p_session_id': sessionId,
+      'p_status': status,
+    };
+    final response = await SupabaseApiHelper.post(
+      ApiRoutes.completeSession,
+      payload,
+    );
+    return response;
+  }
+
+  @override
   Future<ResponseMessageModel> getGuardians() async {
     final response = await SupabaseApiHelper.post(ApiRoutes.getGuardians, null);
     return response;

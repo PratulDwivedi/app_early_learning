@@ -21,6 +21,25 @@ final getQuestionTypesProvider =
   return service.getQuestionTypes();
 });
 
+class StartSessionArgs {
+  final int studentId;
+  final int questionTypeId;
+
+  const StartSessionArgs({
+    required this.studentId,
+    required this.questionTypeId,
+  });
+}
+
+final startSessionProvider =
+    FutureProvider.autoDispose.family<ResponseMessageModel, StartSessionArgs>((
+  ref,
+  args,
+) async {
+  final service = ref.watch(eduServiceProvider);
+  return service.startSession(args.studentId, args.questionTypeId);
+});
+
 final questionByIdProvider =
     FutureProvider.autoDispose.family<Map<String, dynamic>?, int>((
   ref,

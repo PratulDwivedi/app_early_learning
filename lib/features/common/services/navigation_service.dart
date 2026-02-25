@@ -84,7 +84,7 @@ class NavigationService {
         case AppPageRoute.evaluation:
           return navigatorKey.currentState?.push(
             MaterialPageRoute(
-              builder: (context) => const EvaluationScreen(),
+              builder: (context) => EvaluationScreen(args: args),
             ),
           );
         case AppPageRoute.speechSettings:

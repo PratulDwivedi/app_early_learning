@@ -22,5 +22,13 @@ abstract class EduService {
   );
   Future<ResponseMessageModel> getQuestions();
   Future<ResponseMessageModel> getQuestionTypes();
+  Future<ResponseMessageModel> startSession(int studentId, int questionTypeId);
+  Future<ResponseMessageModel> submitAnswer(
+    int sessionId,
+    int questionId,
+    dynamic studentAnswer,
+    int timeTakenSec,
+  );
+  Future<ResponseMessageModel> completeSession(int sessionId, String status);
   Future<ResponseMessageModel> getGuardians();
 }
