@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/models/screen_args_model.dart';
 import '../../common/providers/question_provider.dart';
+import '../../common/providers/speech_settings_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
+import '../../common/services/speech_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/widgets/custom_button.dart';
 import '../providers/auth_service_provider.dart';
@@ -23,6 +25,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   int? _selectedQuestionTypeId;
   bool _isStarted = false;
   bool _isStartingSession = false;
+  bool _isSpeakerEnabled = true;
   int _currentQuestionIndex = 0;
   String? _recordedAnswerPath;
   String? _selectedOption;
@@ -99,6 +102,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         _isRecording = false;
         _questionStartTime = DateTime.now();
       });
+      if (_isSpeakerEnabled && mounted) {
+        await _speakCurrentQuestionFromState();
+      }
     } catch (e) {
       AppSnackbarService.error('Failed to start session: $e');
     } finally {
@@ -120,7 +126,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     }
   }
 
-  void _previousQuestion() {
+  Future<void> _previousQuestion() async {
     if (_currentQuestionIndex > 0) {
       final previousQuestionIndex = _currentQuestionIndex - 1;
       final previousQuestion = _sessionQuestions[previousQuestionIndex];
@@ -130,6 +136,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         _selectedOption = _selectedAnswersByQuestion[previousQuestionId];
         _recordedAnswerPath = null;
       });
+      if (_isSpeakerEnabled && mounted) {
+        await _speakCurrentQuestionFromState();
+      }
     }
   }
 
@@ -144,9 +153,34 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     );
   }
 
-  void _playQuestionAudio() {
-    developer.log('Playing question audio', name: 'EvaluationScreen');
-    AppSnackbarService.success('Playing question audio...');
+  Future<void> _playQuestionAudio(
+    Map<String, dynamic>? question,
+    String questionText,
+  ) async {
+    final audioPrompt = (question?['name_audio_prompt'] ?? '')
+        .toString()
+        .trim();
+    final fallbackText = questionText.trim();
+    final textToSpeak = audioPrompt.isNotEmpty ? audioPrompt : fallbackText;
+
+    if (textToSpeak.isEmpty) {
+      AppSnackbarService.error('No question text available to speak.');
+      return;
+    }
+
+    developer.log('Playing question audio/TTS', name: 'EvaluationScreen');
+    final speechSettings = ref.read(speechSettingsProvider);
+    await ref.read(speechServiceProvider).speak(textToSpeak, speechSettings);
+  }
+
+  Future<void> _speakCurrentQuestionFromState() async {
+    if (!_isStarted || _sessionQuestions.isEmpty) return;
+    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+      return;
+    }
+    final question = _sessionQuestions[_currentQuestionIndex];
+    final questionText = (question['name'] ?? '').toString();
+    await _playQuestionAudio(question, questionText);
   }
 
   Future<void> _submitEvaluation() async {
@@ -172,6 +206,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       _questionStartTime = DateTime.now();
       _isSubmittingAnswer = false;
     });
+    if (_isSpeakerEnabled && mounted) {
+      await _speakCurrentQuestionFromState();
+    }
   }
 
   Future<void> _submitFinalAnswerAndCompleteSession() async {
@@ -279,6 +316,20 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         .toList();
   }
 
+  double _optionCardHeight(List<String> options) {
+    if (options.isEmpty) return 90;
+    final totalChars = options.fold<int>(0, (sum, item) => sum + item.length);
+    final avgChars = totalChars / options.length;
+    final maxChars = options.fold<int>(0, (max, item) {
+      return item.length > max ? item.length : max;
+    });
+
+    if (maxChars > 48 || avgChars > 28) return 150;
+    if (maxChars > 36 || avgChars > 22) return 132;
+    if (maxChars > 24 || avgChars > 16) return 114;
+    return 94;
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
@@ -290,6 +341,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         _isStarted && _sessionQuestions.isNotEmpty ? _sessionQuestions[_currentQuestionIndex] : null;
     final questionText = (currentQuestion?['name'] ?? '').toString();
     final options = _parseOptions(currentQuestion?['options']);
+    final optionCardHeight = _optionCardHeight(options);
+    final optionTextMaxLines = optionCardHeight >= 132 ? 3 : 2;
 
     return Scaffold(
       body: Column(
@@ -495,11 +548,23 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                 ),
                                 child: IconButton(
                                   icon: Icon(
-                                    Icons.volume_up_rounded,
+                                    _isSpeakerEnabled
+                                        ? Icons.volume_up_rounded
+                                        : Icons.volume_off_rounded,
                                     color: primaryColor,
                                   ),
-                                  onPressed: _playQuestionAudio,
-                                  tooltip: 'Play question audio',
+                                  onPressed: () async {
+                                    final nextValue = !_isSpeakerEnabled;
+                                    setState(() => _isSpeakerEnabled = nextValue);
+                                    if (nextValue) {
+                                      await _speakCurrentQuestionFromState();
+                                    } else {
+                                      await ref.read(speechServiceProvider).stop();
+                                    }
+                                  },
+                                  tooltip: _isSpeakerEnabled
+                                      ? 'Speaker on'
+                                      : 'Speaker off',
                                 ),
                               ),
                             ],
@@ -509,7 +574,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                               final gridSpacing = 12.0;
                               final cardWidth =
                                   (constraints.maxWidth - gridSpacing) / 2;
-                              final cardHeight = 92.0;
                               return GridView.builder(
                                 itemCount: options.length,
                                 shrinkWrap: true,
@@ -519,7 +583,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                   crossAxisCount: 2,
                                   crossAxisSpacing: gridSpacing,
                                   mainAxisSpacing: gridSpacing,
-                                  childAspectRatio: cardWidth / cardHeight,
+                                  childAspectRatio:
+                                      cardWidth / optionCardHeight,
                                 ),
                                 itemBuilder: (context, index) {
                                   final optionColor = index.isEven
@@ -592,7 +657,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                           Expanded(
                                             child: Text(
                                               optionValue,
-                                              maxLines: 2,
+                                              maxLines: optionTextMaxLines,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                 fontSize: 15,
@@ -693,7 +758,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                     Expanded(
                       child: CustomSecondaryButton(
                         label: 'Previous',
-                        onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
+                        onPressed: _currentQuestionIndex > 0
+                            ? () => _previousQuestion()
+                            : null,
                         primaryColor: primaryColor,
                         textColor: colors.textColor,
                         height: 56,

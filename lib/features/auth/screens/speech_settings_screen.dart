@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import '../../common/providers/speech_settings_provider.dart';
+import '../../common/services/speech_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/widgets/custom_button.dart';
 import '../providers/theme_provider.dart';
@@ -15,56 +16,24 @@ class SpeechSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
-  late FlutterTts _flutterTts;
-  String? _selectedLanguage = 'en-US';
-  double _speechRate = 0.5;
-  double _pitch = 1.0;
-  double _volume = 0.8;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeTts();
-  }
-
-  Future<void> _initializeTts() async {
-    _flutterTts = FlutterTts();
-
-    // Initialize voices and languages
-    await _flutterTts.getVoices;
-
-    // Set default values
-    await _flutterTts.setLanguage(_selectedLanguage!);
-    await _flutterTts.setSpeechRate(_speechRate);
-    await _flutterTts.setPitch(_pitch);
-    await _flutterTts.setVolume(_volume);
-  }
-
   Future<void> _playTestAudio() async {
-    await _flutterTts.setLanguage(_selectedLanguage!);
-    await _flutterTts.setSpeechRate(_speechRate);
-    await _flutterTts.setPitch(_pitch);
-    await _flutterTts.setVolume(_volume);
-
-    await _flutterTts.speak(
+    final settings = ref.read(speechSettingsProvider);
+    await ref.read(speechServiceProvider).speak(
       'This is a test of the speech settings. You can adjust the rate, pitch, and volume.',
+      settings,
     );
   }
 
   void _stopAudio() {
-    _flutterTts.stop();
-  }
-
-  @override
-  void dispose() {
-    _flutterTts.stop();
-    super.dispose();
+    ref.read(speechServiceProvider).stop();
   }
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
+    final speechSettings = ref.watch(speechSettingsProvider);
+    final speechNotifier = ref.read(speechSettingsProvider.notifier);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -115,7 +84,7 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                             const SizedBox(height: 12),
                             DropdownButton<String>(
                               isExpanded: true,
-                              value: _selectedLanguage,
+                              value: speechSettings.language,
                               style: TextStyle(color: colors.textColor),
                               dropdownColor: colors.cardColor,
                               items:
@@ -137,7 +106,7 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                                       .toList(),
                               onChanged: (value) {
                                 if (value != null) {
-                                  setState(() => _selectedLanguage = value);
+                                  speechNotifier.setLanguage(value);
                                 }
                               },
                             ),
@@ -161,7 +130,7 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _speechRate.toStringAsFixed(2),
+                                  speechSettings.speechRate.toStringAsFixed(2),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colors.hintColor,
@@ -171,14 +140,14 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Slider(
-                              value: _speechRate,
+                              value: speechSettings.speechRate,
                               min: 0.1,
                               max: 1.0,
                               divisions: 9,
                               activeColor: primaryColor,
                               inactiveColor: primaryColor.withOpacity(0.2),
                               onChanged: (value) {
-                                setState(() => _speechRate = value);
+                                speechNotifier.setSpeechRate(value);
                               },
                             ),
                           ],
@@ -201,7 +170,7 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _pitch.toStringAsFixed(2),
+                                  speechSettings.pitch.toStringAsFixed(2),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colors.hintColor,
@@ -211,14 +180,14 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Slider(
-                              value: _pitch,
+                              value: speechSettings.pitch,
                               min: 0.5,
                               max: 2.0,
                               divisions: 15,
                               activeColor: primaryColor,
                               inactiveColor: primaryColor.withOpacity(0.2),
                               onChanged: (value) {
-                                setState(() => _pitch = value);
+                                speechNotifier.setPitch(value);
                               },
                             ),
                           ],
@@ -241,7 +210,7 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _volume.toStringAsFixed(2),
+                                  speechSettings.volume.toStringAsFixed(2),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colors.hintColor,
@@ -251,14 +220,14 @@ class _SpeechSettingsScreenState extends ConsumerState<SpeechSettingsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Slider(
-                              value: _volume,
+                              value: speechSettings.volume,
                               min: 0.0,
                               max: 1.0,
                               divisions: 10,
                               activeColor: primaryColor,
                               inactiveColor: primaryColor.withOpacity(0.2),
                               onChanged: (value) {
-                                setState(() => _volume = value);
+                                speechNotifier.setVolume(value);
                               },
                             ),
                           ],
