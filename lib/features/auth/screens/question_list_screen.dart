@@ -41,54 +41,57 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
     final questionsAsync = ref.watch(getQuestionsProvider);
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CommonGradientHeader(
-              title: 'Questions',
-              onRefresh: () {
-                ref.invalidate(getQuestionsProvider);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextFormField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search questions...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: colors.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 0,
-                  ),
+      body: Column(
+        children: [
+          CommonGradientHeader(
+            title: 'Questions',
+            onRefresh: () {
+              ref.invalidate(getQuestionsProvider);
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextFormField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search questions...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: colors.cardColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 0,
                 ),
               ),
             ),
-            questionsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stack) => Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Failed to load questions: $error',
-                  style: TextStyle(color: colors.textColor),
+          ),
+          Expanded(
+            child: questionsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Failed to load questions: $error',
+                    style: TextStyle(color: colors.textColor),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
               data: (response) {
                 if (!response.isSuccess) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      response.message,
-                      style: TextStyle(color: colors.textColor),
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        response.message,
+                        style: TextStyle(color: colors.textColor),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   );
                 }
@@ -110,13 +113,16 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                 }).toList();
 
                 if (filtered.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      _searchQuery.isEmpty
-                          ? 'No questions found.'
-                          : 'No questions match your search.',
-                      style: TextStyle(color: colors.textColor),
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        _searchQuery.isEmpty
+                            ? 'No questions found.'
+                            : 'No questions match your search.',
+                        style: TextStyle(color: colors.textColor),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   );
                 }
@@ -135,79 +141,78 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                 final entries = grouped.entries.toList()
                   ..sort((a, b) => a.key.compareTo(b.key));
 
-                return Padding(
+                return ListView.builder(
                   padding: const EdgeInsets.only(
                     left: 12,
                     right: 12,
                     bottom: 16,
                   ),
-                  child: Column(
-                    children: entries.map((entry) {
-                      final questions = entry.value
-                        ..sort(
-                          (a, b) => _toInt(a['sort_order']).compareTo(
-                            _toInt(b['sort_order']),
-                          ),
-                        );
-                      return Card(
-                        color: colors.cardColor,
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ExpansionTile(
-                          title: Text(
-                            '${entry.key} (${questions.length})',
-                            style: TextStyle(
-                              color: colors.textColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          children: questions.map((q) {
-                            final name = (q['name'] ?? '').toString();
-                            final options = (q['options'] ?? '').toString();
-                            final correct =
-                                (q['correct_answer'] ?? '').toString();
-                           
-                            return ListTile(
-                              title: Text(
-                                name,
-                                style: TextStyle(color: colors.textColor),
-                              ),
-                              subtitle: Text(
-                                'Options: $options\nCorrect: $correct',
-                                style: TextStyle(
-                                  color: colors.hintColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              trailing: IconButton(
-                                icon: Icon(Icons.edit, color: primaryColor),
-                                tooltip: 'Edit',
-                                onPressed: () async {
-                                  final args = ScreenArgsModel(
-                                    routeName: AppPageRoute.addquestion,
-                                    name: 'Edit Question',
-                                    data: {'id': q['id']},
-                                  );
-                                  final updated = await NavigationService
-                                      .navigateTo(
-                                    args.routeName,
-                                    arguments: args,
-                                  );
-                                  if (updated == true) {
-                                    ref.invalidate(getQuestionsProvider);
-                                  }
-                                },
-                              ),
-                            );
-                          }).toList(),
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    final questions = entry.value
+                      ..sort(
+                        (a, b) => _toInt(a['sort_order']).compareTo(
+                          _toInt(b['sort_order']),
                         ),
                       );
-                    }).toList(),
-                  ),
+                    return Card(
+                      color: colors.cardColor,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: ExpansionTile(
+                        title: Text(
+                          '${entry.key} (${questions.length})',
+                          style: TextStyle(
+                            color: colors.textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        children: questions.map((q) {
+                          final name = (q['name'] ?? '').toString();
+                          final options = (q['options'] ?? '').toString();
+                          final correct = (q['correct_answer'] ?? '').toString();
+
+                          return ListTile(
+                            title: Text(
+                              name,
+                              style: TextStyle(color: colors.textColor),
+                            ),
+                            subtitle: Text(
+                              'Options: $options\nCorrect: $correct',
+                              style: TextStyle(
+                                color: colors.hintColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(Icons.edit, color: primaryColor),
+                              tooltip: 'Edit',
+                              onPressed: () async {
+                                final args = ScreenArgsModel(
+                                  routeName: AppPageRoute.addquestion,
+                                  name: 'Edit Question',
+                                  data: {'id': q['id']},
+                                );
+                                final updated = await NavigationService
+                                    .navigateTo(
+                                  args.routeName,
+                                  arguments: args,
+                                );
+                                if (updated == true) {
+                                  ref.invalidate(getQuestionsProvider);
+                                }
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

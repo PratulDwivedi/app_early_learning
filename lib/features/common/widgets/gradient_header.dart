@@ -87,7 +87,7 @@ class GradientHeader extends ConsumerWidget {
                           child: TextFormField(
                             controller: searchController,
                             decoration: InputDecoration(
-                              hintText: 'Search students...',
+                              hintText: 'Search Kid...',
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
                               fillColor: colors.cardColor,

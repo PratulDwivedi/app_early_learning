@@ -145,7 +145,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                 if (filteredGuardians.isEmpty && _searchQuery.isNotEmpty) {
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.all(10.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

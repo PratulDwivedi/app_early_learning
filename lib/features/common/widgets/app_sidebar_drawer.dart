@@ -154,6 +154,7 @@ class AppSidebarDrawer extends ConsumerWidget {
                         );
                       },
                     ),
+                  /*
                   _DrawerMenuItem(
                     icon: Icons.sync_alt_rounded,
                     iconColor: primaryColor,
@@ -170,17 +171,23 @@ class AppSidebarDrawer extends ConsumerWidget {
                       );
                     },
                   ),
-
-                  Divider(height: 32, thickness: 1, color: colors.hintColor),
-                  _DrawerMenuItem(
-                    icon: Icons.logout,
-                    iconColor: primaryColor,
-                    title: 'Logout',
-                    onTap: () {
-                      _showLogoutDialog(context, ref, colors, primaryColor);
-                    },
-                  ),
+                */
                 ],
+              ),
+            ),
+            Divider(height: 1, thickness: 1, color: colors.hintColor),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: _DrawerMenuItem(
+                  icon: Icons.logout,
+                  iconColor: primaryColor,
+                  title: 'Logout',
+                  onTap: () {
+                    _showLogoutDialog(context, ref, colors, primaryColor);
+                  },
+                ),
               ),
             ),
           ],

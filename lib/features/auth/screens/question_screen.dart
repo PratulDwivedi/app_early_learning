@@ -73,13 +73,13 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
 
       setState(() {
         _nameController.text = (question['name'] ?? '').toString();
-        _nameAudioPromptController.text =
-            (question['name_audio_prompt'] ?? '').toString();
+        _nameAudioPromptController.text = (question['name_audio_prompt'] ?? '')
+            .toString();
         _optionsController.text = (question['options'] ?? '').toString();
         _optionsAudioPromptController.text =
             (question['options_audio_prompt'] ?? '').toString();
-        _correctAnswerController.text =
-            (question['correct_answer'] ?? '').toString();
+        _correctAnswerController.text = (question['correct_answer'] ?? '')
+            .toString();
         _hintController.text = (question['hint'] ?? '').toString();
         _imageUrlController.text = (question['image_url'] ?? '').toString();
         _questionTypeId = _tryParseInt(question['question_type_id']);
@@ -176,216 +176,222 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
         .toList();
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CommonGradientHeader(
-              title: _isEditing ? 'Edit Question' : 'Question',
-              onRefresh: () {
-                ref.invalidate(authInitializerProvider);
-                ref.invalidate(getQuestionTypesProvider);
-                if (_editingId != null) {
-                  ref.invalidate(questionByIdProvider(_editingId!));
-                  _loadQuestionIfEditing();
-                }
-              },
-            ),
-            if (_isLoadingQuestion)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: CircularProgressIndicator(),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(24),
+      body: Column(
+        children: [
+          CommonGradientHeader(
+            title: _isEditing ? 'Edit Question' : 'Question',
+            onRefresh: () {
+              ref.invalidate(authInitializerProvider);
+              ref.invalidate(getQuestionTypesProvider);
+              if (_editingId != null) {
+                ref.invalidate(questionByIdProvider(_editingId!));
+                _loadQuestionIfEditing();
+              }
+            },
+          ),
+          if (_isLoadingQuestion) const LinearProgressIndicator(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: colors.cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colors.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
-                      child: Column(
-                        children: [
-                          questionTypesAsync.when(
-                            loading: () => const LinearProgressIndicator(),
-                            error: (error, stack) => Text(
-                              'Failed to load question types',
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      questionTypesAsync.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, stack) => Text(
+                          'Failed to load question types',
+                          style: TextStyle(color: colors.textColor),
+                        ),
+                        data: (response) {
+                          if (!response.isSuccess || typeIds.isEmpty) {
+                            return Text(
+                              response.message,
                               style: TextStyle(color: colors.textColor),
+                            );
+                          }
+                          final selected = typeIds.contains(_questionTypeId)
+                              ? _questionTypeId
+                              : null;
+                          return CustomDropdownFormField<int>(
+                            isExpanded: true,
+                            value: selected,
+                            labelText: 'Question Type',
+                            prefixIcon: Icon(
+                              Icons.category_outlined,
+                              color: colors.hintColor,
                             ),
-                            data: (response) {
-                              if (!response.isSuccess || typeIds.isEmpty) {
-                                return Text(
-                                  response.message,
-                                  style: TextStyle(color: colors.textColor),
-                                );
-                              }
-                              final selected = typeIds.contains(_questionTypeId)
-                                  ? _questionTypeId
-                                  : null;
-                              return CustomDropdownFormField<int>(
-                                isExpanded: true,
-                                value: selected,
-                                labelText: 'Question Type',
-                                prefixIcon: Icon(
-                                  Icons.category_outlined,
-                                  color: colors.hintColor,
-                                ),
-                                fillColor: colors.inputFillColor,
-                                hintColor: colors.hintColor,
-                                primaryColor: primaryColor,
-                                items: typeIds,
-                                itemLabel: (id) {
-                                  final item = questionTypes.firstWhere(
-                                    (q) => _tryParseInt(q['id']) == id,
-                                    orElse: () => <String, dynamic>{},
-                                  );
-                                  return (item['name'] ?? '').toString();
-                                },
-                                onChanged: (value) {
-                                  setState(() => _questionTypeId = value);
-                                },
-                                validator: (value) {
-                                  if (value == null) return 'Required';
-                                  return null;
-                                },
+                            fillColor: colors.inputFillColor,
+                            hintColor: colors.hintColor,
+                            primaryColor: primaryColor,
+                            items: typeIds,
+                            itemLabel: (id) {
+                              final item = questionTypes.firstWhere(
+                                (q) => _tryParseInt(q['id']) == id,
+                                orElse: () => <String, dynamic>{},
                               );
+                              return (item['name'] ?? '').toString();
                             },
-                          ),
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _nameController,
-                            labelText: 'Question',
-                            hintText: 'Enter question',
-                            prefixIcon: Icons.help_outline,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                            maxLines: 3,
+                            onChanged: (value) {
+                              setState(() => _questionTypeId = value);
+                            },
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Question is required';
-                              }
+                              if (value == null) return 'Required';
                               return null;
                             },
-                          ),
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _nameAudioPromptController,
-                            labelText: 'Question Audio Prompt',
-                            hintText: 'e.g. which-starts-with-a.mp3',
-                            prefixIcon: Icons.audiotrack_outlined,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                          ),
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _optionsController,
-                            labelText: 'Options',
-                            hintText: 'e.g. Apple,Ant,Ball,Cat',
-                            prefixIcon: Icons.list,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                            maxLines: 2,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Options are required';
-                              }
-                              return null;
-                            },
-                          ),
-                          /*
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _optionsAudioPromptController,
-                            labelText: 'Options Audio Prompt',
-                            hintText: 'e.g. apple-ant-ball-cat.mp3',
-                            prefixIcon: Icons.multitrack_audio_outlined,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                          ),
-                          */
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _correctAnswerController,
-                            labelText: 'Correct Answer',
-                            hintText: 'e.g. Apple',
-                            prefixIcon: Icons.check_circle_outline,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Correct answer is required';
-                              }
-                              return null;
-                            },
-                          ),
-                          /*
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _hintController,
-                            labelText: 'Hint',
-                            hintText: 'Optional hint',
-                            prefixIcon: Icons.lightbulb_outline,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                            maxLines: 2,
-                          ),
-                          const SizedBox(height: 20),
-                          CustomTextFormField(
-                            controller: _imageUrlController,
-                            labelText: 'Image URL',
-                            hintText: 'e.g. letter-a.png',
-                            prefixIcon: Icons.image_outlined,
-                            colors: colors,
-                            primaryColor: primaryColor,
-                            keyboardType: TextInputType.text,
-                          ),
-
-                          */
-                        ],
+                          );
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    CustomPrimaryButton(
-                      label: _isLoading
-                          ? 'Saving...'
-                          : (_isEditing ? 'Update' : 'Save'),
-                      onPressed:
-                          (_isLoading || _isLoadingQuestion) ? null : _submitForm,
-                      isLoading: _isLoading,
-                      primaryColor: primaryColor,
-                    ),
-                    const SizedBox(height: 16),
-                    CustomSecondaryButton(
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _nameController,
+                        labelText: 'Question',
+                        hintText: 'Enter question',
+                        prefixIcon: Icons.help_outline,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                        maxLines: 3,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Question is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _nameAudioPromptController,
+                        labelText: 'Question Audio Prompt',
+                        hintText: 'e.g. which-starts-with-a.mp3',
+                        prefixIcon: Icons.audiotrack_outlined,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _optionsController,
+                        labelText: 'Options',
+                        hintText: 'e.g. Apple,Ant,Ball,Cat',
+                        prefixIcon: Icons.list,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                        maxLines: 2,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Options are required';
+                          }
+                          return null;
+                        },
+                      ),
+                      /*
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _optionsAudioPromptController,
+                        labelText: 'Options Audio Prompt',
+                        hintText: 'e.g. apple-ant-ball-cat.mp3',
+                        prefixIcon: Icons.multitrack_audio_outlined,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                      ),
+                      */
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _correctAnswerController,
+                        labelText: 'Correct Answer',
+                        hintText: 'e.g. Apple',
+                        prefixIcon: Icons.check_circle_outline,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Correct answer is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      /*
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _hintController,
+                        labelText: 'Hint',
+                        hintText: 'Optional hint',
+                        prefixIcon: Icons.lightbulb_outline,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextFormField(
+                        controller: _imageUrlController,
+                        labelText: 'Image URL',
+                        hintText: 'e.g. letter-a.png',
+                        prefixIcon: Icons.image_outlined,
+                        colors: colors,
+                        primaryColor: primaryColor,
+                        keyboardType: TextInputType.text,
+                      ),
+
+                      */
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CustomSecondaryButton(
                       label: 'Cancel',
                       onPressed: (_isLoading || _isLoadingQuestion)
                           ? null
                           : () => NavigationService.goBack(),
                       primaryColor: primaryColor,
                       textColor: colors.textColor,
+                      height: 56,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomPrimaryButton(
+                      label: _isLoading
+                          ? 'Saving...'
+                          : (_isEditing ? 'Update' : 'Save'),
+                      onPressed: (_isLoading || _isLoadingQuestion)
+                          ? null
+                          : _submitForm,
+                      isLoading: _isLoading,
+                      primaryColor: primaryColor,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

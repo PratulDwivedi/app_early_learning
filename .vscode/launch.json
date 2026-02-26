@@ -6,7 +6,10 @@
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
-      "args": ["-d", "chrome"]
+      "args": [
+        "-d",
+        "chrome"
+      ]
     },
     {
       "name": "Android-Emulator",
@@ -24,6 +27,12 @@
       "name": "iPad-Simulator",
       "request": "launch",
       "type": "dart"
+    },
+    {
+      "name": "iPhone-Pratul",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "00008120-000C30840263601E"
     },
     {
       "name": "iOS-Simulator",
