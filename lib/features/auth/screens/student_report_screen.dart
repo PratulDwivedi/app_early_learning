@@ -40,11 +40,18 @@ class StudentReportContent extends ConsumerWidget {
 
   const StudentReportContent({super.key, this.studentData});
 
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
     final summaryAsync = ref.watch(studentSummaryProvider);
+    final hasValidStudentId = _toInt(studentData?['id']) > 0;
 
     return summaryAsync.when(
         data: (summaryData) {
@@ -77,7 +84,7 @@ class StudentReportContent extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
               // Student Info Card (if student data is passed)
-              if (studentData != null)
+              if (hasValidStudentId)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 24),
                   child: Container(

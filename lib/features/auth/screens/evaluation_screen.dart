@@ -149,11 +149,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     AppSnackbarService.success('Playing question audio...');
   }
 
-  void _playOptionAudio(int optionIndex) {
-    developer.log('Playing audio for option $optionIndex', name: 'EvaluationScreen');
-    AppSnackbarService.success('Playing option ${optionIndex + 1} audio...');
-  }
-
   Future<void> _submitEvaluation() async {
     await _submitFinalAnswerAndCompleteSession();
   }
@@ -297,18 +292,43 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final options = _parseOptions(currentQuestion?['options']);
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CommonGradientHeader(
-              title: 'Evaluation',
-              onRefresh: () {
-                ref.invalidate(authInitializerProvider);
-                ref.invalidate(getQuestionTypesProvider);
-              },
+      body: Column(
+        children: [
+          CommonGradientHeader(
+            title: 'Evaluation',
+            onRefresh: () {
+              ref.invalidate(authInitializerProvider);
+              ref.invalidate(getQuestionTypesProvider);
+            },
+          ),
+          if (_isStarted)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 10),
+              color: colors.bgColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Question ${_currentQuestionIndex + 1} of ${_sessionQuestions.length}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colors.hintColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: (_currentQuestionIndex + 1) / _sessionQuestions.length,
+                    backgroundColor: colors.hintColor.withOpacity(0.25),
+                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                  ),
+                ],
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -328,9 +348,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                         ],
                       ),
                       child: questionTypesAsync.when(
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (error, stack) => Text(
                           'Failed to load evaluation modes: $error',
                           style: TextStyle(color: colors.textColor),
@@ -343,8 +362,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                             );
                           }
 
-                          final modes = List<Map<String, dynamic>>.from(response.data)
-                            ..sort(
+                          final modes = List<Map<String, dynamic>>.from(
+                            response.data,
+                          )..sort(
                               (a, b) => _toInt(a['sort_order']).compareTo(
                                 _toInt(b['sort_order']),
                               ),
@@ -361,8 +381,10 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                 runSpacing: 12,
                                 children: modes.map((mode) {
                                   final modeId = _toInt(mode['id']);
-                                  final modeName = (mode['name'] ?? '').toString();
-                                  final isSelected = _selectedQuestionTypeId == modeId;
+                                  final modeName =
+                                      (mode['name'] ?? '').toString();
+                                  final isSelected =
+                                      _selectedQuestionTypeId == modeId;
                                   return SizedBox(
                                     width: cardWidth,
                                     child: InkWell(
@@ -371,17 +393,21 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                           ? null
                                           : () => _startSession(modeId),
                                       child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 180),
+                                        duration:
+                                            const Duration(milliseconds: 180),
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
                                           color: isSelected
                                               ? primaryColor.withOpacity(0.15)
                                               : colors.inputFillColor,
-                                          borderRadius: BorderRadius.circular(14),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
                                           border: Border.all(
                                             color: isSelected
                                                 ? primaryColor
-                                                : colors.hintColor.withOpacity(0.3),
+                                                : colors.hintColor.withOpacity(
+                                                    0.3,
+                                                  ),
                                             width: isSelected ? 2 : 1,
                                           ),
                                         ),
@@ -398,11 +424,13 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 10),
-                                            if (_isStartingSession && isSelected)
+                                            if (_isStartingSession &&
+                                                isSelected)
                                               SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(
+                                                child:
+                                                    CircularProgressIndicator(
                                                   strokeWidth: 2,
                                                   color: primaryColor,
                                                 ),
@@ -411,7 +439,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                               Icon(
                                                 isSelected
                                                     ? Icons.check_circle
-                                                    : Icons.radio_button_unchecked,
+                                                    : Icons
+                                                        .radio_button_unchecked,
                                                 color: isSelected
                                                     ? primaryColor
                                                     : colors.hintColor,
@@ -430,15 +459,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                       ),
                     ),
                   ] else ...[
-                    Text(
-                      'Question ${_currentQuestionIndex + 1} of ${_sessionQuestions.length}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colors.hintColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -484,120 +504,111 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 28),
-                          Text(
-                            'Select an option:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: colors.hintColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Column(
-                            children: List.generate(options.length, (index) {
-                              final optionColor = index.isEven
-                                  ? primaryColor
-                                  : optionPalette[index % optionPalette.length];
-                              final isSelected = _selectedOption == options[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Color.alphaBlend(
-                                            primaryColor.withOpacity(0.25),
-                                            optionColor.withOpacity(0.24),
-                                          )
-                                        : optionColor.withOpacity(0.16),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? primaryColor
-                                          : optionColor.withOpacity(0.7),
-                                      width: isSelected ? 2 : 1.4,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            final questionId = _toInt(currentQuestion?['id']);
-                                            setState(() {
-                                              _selectedOption = options[index];
-                                              if (questionId > 0) {
-                                                _selectedAnswersByQuestion[questionId] =
-                                                    options[index];
-                                              }
-                                            });
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16),
-                                            child: Row(
-                                              children: [
-                                                Radio<String>(
-                                                  value: options[index],
-                                                  groupValue: _selectedOption,
-                                                  onChanged: (value) {
-                                                    if (value != null) {
-                                                      final questionId = _toInt(
-                                                        currentQuestion?['id'],
-                                                      );
-                                                      setState(() {
-                                                        _selectedOption = value;
-                                                        if (questionId > 0) {
-                                                          _selectedAnswersByQuestion[questionId] =
-                                                              value;
-                                                        }
-                                                      });
-                                                    }
-                                                  },
-                                                  activeColor: optionColor,
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(
-                                                    options[index],
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      color: colors.textColor,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 8),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: optionColor.withOpacity(
-                                              isSelected ? 0.30 : 0.2,
-                                            ),
-                                          ),
-                                          child: IconButton(
-                                            icon: Icon(
-                                              Icons.volume_up_rounded,
-                                              size: 20,
-                                              color: optionColor,
-                                            ),
-                                            onPressed: () => _playOptionAudio(index),
-                                            tooltip: 'Play option audio',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final gridSpacing = 12.0;
+                              final cardWidth =
+                                  (constraints.maxWidth - gridSpacing) / 2;
+                              final cardHeight = 92.0;
+                              return GridView.builder(
+                                itemCount: options.length,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: gridSpacing,
+                                  mainAxisSpacing: gridSpacing,
+                                  childAspectRatio: cardWidth / cardHeight,
                                 ),
+                                itemBuilder: (context, index) {
+                                  final optionColor = index.isEven
+                                      ? primaryColor
+                                      : optionPalette[
+                                          index % optionPalette.length
+                                        ];
+                                  final optionValue = options[index];
+                                  final isSelected =
+                                      _selectedOption == optionValue;
+
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      final questionId =
+                                          _toInt(currentQuestion?['id']);
+                                      setState(() {
+                                        _selectedOption = optionValue;
+                                        if (questionId > 0) {
+                                          _selectedAnswersByQuestion[
+                                                  questionId] =
+                                              optionValue;
+                                        }
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Color.alphaBlend(
+                                                primaryColor.withOpacity(0.25),
+                                                optionColor.withOpacity(0.24),
+                                              )
+                                            : optionColor.withOpacity(0.16),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? primaryColor
+                                              : optionColor.withOpacity(0.7),
+                                          width: isSelected ? 2 : 1.2,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Radio<String>(
+                                            value: optionValue,
+                                            groupValue: _selectedOption,
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                final questionId = _toInt(
+                                                  currentQuestion?['id'],
+                                                );
+                                                setState(() {
+                                                  _selectedOption = value;
+                                                  if (questionId > 0) {
+                                                    _selectedAnswersByQuestion[
+                                                            questionId] =
+                                                        value;
+                                                  }
+                                                });
+                                              }
+                                            },
+                                            activeColor: optionColor,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              optionValue,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                color: colors.textColor,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
-                            }),
+                            },
                           ),
-                          const SizedBox(height: 24),
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -650,7 +661,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                   child: IconButton(
                                     icon: Icon(
                                       _isRecording ? Icons.stop : Icons.mic,
-                                      color: _isRecording ? Colors.white : primaryColor,
+                                      color:
+                                          _isRecording ? Colors.white : primaryColor,
                                       size: 28,
                                     ),
                                     onPressed: _toggleRecording,
@@ -665,42 +677,51 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomSecondaryButton(
-                            label: 'Previous',
-                            onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
-                            primaryColor: primaryColor,
-                            textColor: colors.textColor,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _currentQuestionIndex < _sessionQuestions.length - 1
-                              ? CustomPrimaryButton(
-                                  label: 'Next',
-                                  onPressed: _isSubmittingAnswer ? null : _nextQuestion,
-                                  primaryColor: primaryColor,
-                                  isLoading: _isSubmittingAnswer,
-                                )
-                              : CustomPrimaryButton(
-                                  label: 'Submit',
-                                  onPressed:
-                                      _isSubmittingAnswer ? null : _submitEvaluation,
-                                  primaryColor: primaryColor,
-                                  isLoading: _isSubmittingAnswer,
-                                ),
-                        ),
-                      ],
-                    ),
                   ],
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          if (_isStarted)
+            SafeArea(
+              top: false,
+              child: Container(
+                color: colors.bgColor,
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CustomSecondaryButton(
+                        label: 'Previous',
+                        onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
+                        primaryColor: primaryColor,
+                        textColor: colors.textColor,
+                        height: 56,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _currentQuestionIndex < _sessionQuestions.length - 1
+                          ? CustomPrimaryButton(
+                              label: 'Next',
+                              onPressed: _isSubmittingAnswer ? null : _nextQuestion,
+                              primaryColor: primaryColor,
+                              isLoading: _isSubmittingAnswer,
+                              height: 56,
+                            )
+                          : CustomPrimaryButton(
+                              label: 'Submit',
+                              onPressed: _isSubmittingAnswer ? null : _submitEvaluation,
+                              primaryColor: primaryColor,
+                              isLoading: _isSubmittingAnswer,
+                              height: 56,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

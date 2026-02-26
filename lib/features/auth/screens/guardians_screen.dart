@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_constants.dart';
+import '../../common/models/screen_args_model.dart';
 import '../../common/providers/student_provider.dart';
+import '../../common/services/navigation_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../providers/theme_provider.dart';
 
@@ -71,14 +74,6 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
     return 2;
   }
 
-  double _guardianCardAspectRatio(BuildContext context, int crossAxisCount) {
-    if (crossAxisCount == 1) return 3.4;
-    final width = MediaQuery.of(context).size.width;
-    if (width >= 1400) return 3.2;
-    if (width >= 1000) return 3.0;
-    return 2.9;
-  }
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
@@ -86,7 +81,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
     final guardiansAsync = ref.watch(getGuardiansProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       child: Column(
         children: [
           TextFormField(
@@ -106,6 +101,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
               ),
             ),
           ),
+          const SizedBox(height: 8),
           Expanded(
             child: guardiansAsync.when(
               data: (guardians) {
@@ -138,8 +134,17 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                 final filteredGuardians = guardians.where((guardian) {
                   final fullName = guardian.fullName.toLowerCase();
                   final email = guardian.email.toLowerCase();
+                  final studentNames = guardian.students
+                      .map(
+                        (student) =>
+                            '${student.firstName} ${student.lastName}'
+                                .toLowerCase()
+                                .trim(),
+                      )
+                      .join(' ');
                   return fullName.contains(_searchQuery) ||
-                      email.contains(_searchQuery);
+                      email.contains(_searchQuery) ||
+                      studentNames.contains(_searchQuery);
                 }).toList();
 
                 if (filteredGuardians.isEmpty && _searchQuery.isNotEmpty) {
@@ -177,99 +182,214 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                 }
 
                 final crossAxisCount = _gridCrossAxisCount(context);
-                return GridView.builder(
-                  itemCount: filteredGuardians.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: _guardianCardAspectRatio(
-                      context,
-                      crossAxisCount,
-                    ),
-                  ),
-                  itemBuilder: (context, index) {
-                    final guardian = filteredGuardians[index];
-                    final firstName = guardian.fullName.isNotEmpty
-                        ? guardian.fullName.split(' ').first
-                        : 'G';
-                    final avatarLetter = firstName.isNotEmpty
-                        ? firstName[0].toUpperCase()
-                        : 'G';
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    const spacing = 12.0;
+                    final itemWidth = crossAxisCount == 1
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth -
+                                (crossAxisCount - 1) * spacing) /
+                            crossAxisCount;
 
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: colors.cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: primaryColor.withOpacity(0.3),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
+                    return SingleChildScrollView(
+                      child: Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: filteredGuardians.map((guardian) {
+                          final firstName = guardian.fullName.isNotEmpty
+                              ? guardian.fullName.split(' ').first
+                              : 'G';
+                          final avatarLetter = firstName.isNotEmpty
+                              ? firstName[0].toUpperCase()
+                              : 'G';
+
+                          return SizedBox(
+                            width: itemWidth,
+                            child: Container(
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    primaryColor.withOpacity(0.8),
-                                    primaryColor,
-                                  ],
+                                color: colors.cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: primaryColor.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  avatarLetter,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    guardian.fullName,
-                                    style: TextStyle(
-                                      color: colors.textColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    guardian.email,
-                                    style: TextStyle(
-                                      color: colors.hintColor,
-                                      fontSize: 12,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            primaryColor.withOpacity(0.8),
+                                            primaryColor,
+                                          ],
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          avatarLetter,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            guardian.fullName,
+                                            style: TextStyle(
+                                              color: colors.textColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            guardian.email,
+                                            style: TextStyle(
+                                              color: colors.hintColor,
+                                              fontSize: 12,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (guardian.students.isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Divider(
+                                              height: 1,
+                                              thickness: 1,
+                                              color: colors.hintColor
+                                                  .withOpacity(0.25),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            ...List.generate(
+                                              guardian.students.length,
+                                              (studentIndex) {
+                                                final student = guardian
+                                                    .students[studentIndex];
+                                                final fullName =
+                                                    '${student.firstName} ${student.lastName}'
+                                                        .trim();
+                                                final studentName =
+                                                    fullName.isEmpty
+                                                        ? 'Unknown Student'
+                                                        : fullName;
+                                                return Padding(
+                                                  padding: EdgeInsets.only(
+                                                    bottom: studentIndex ==
+                                                            guardian.students
+                                                                    .length -
+                                                                1
+                                                        ? 0
+                                                        : 4,
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.school_outlined,
+                                                        size: 14,
+                                                        color: colors.hintColor,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Expanded(
+                                                        child: Text(
+                                                          '$studentName • Grade ${student.grade ?? '-'}',
+                                                          style: TextStyle(
+                                                            color:
+                                                                colors.hintColor,
+                                                            fontSize: 12,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: Icon(
+                                                          Icons
+                                                              .add_chart_rounded,
+                                                          size: 18,
+                                                          color: primaryColor,
+                                                        ),
+                                                        tooltip: 'View report',
+                                                        onPressed:
+                                                            student.id > 0
+                                                                ? () {
+                                                                    final args =
+                                                                        ScreenArgsModel(
+                                                                      routeName:
+                                                                          AppPageRoute
+                                                                              .reports,
+                                                                      name:
+                                                                          '$studentName - Report Card',
+                                                                      data: {
+                                                                        'id': student
+                                                                            .id,
+                                                                        'first_name':
+                                                                            student.firstName,
+                                                                        'last_name':
+                                                                            student.lastName,
+                                                                        'grade':
+                                                                            student.grade,
+                                                                      },
+                                                                    );
+                                                                    NavigationService
+                                                                        .navigateTo(
+                                                                      args
+                                                                          .routeName,
+                                                                      arguments:
+                                                                          args,
+                                                                    );
+                                                                  }
+                                                                : null,
+                                                        constraints:
+                                                            const BoxConstraints
+                                                                .tightFor(
+                                                          width: 30,
+                                                          height: 30,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       ),
                     );
                   },
