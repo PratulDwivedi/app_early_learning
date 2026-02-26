@@ -20,3 +20,10 @@ CREATE POLICY question_types_tenant_isolation
   ON edu.question_types
   FOR ALL
   USING (tenant_id = get_current_tenant_id());
+
+-- Data for question_types table
+id,name,icon_url,sort_order,data,is_active,tenant_id,created_by,created_at,updated_by,updated_at
+1,Letter/Blend Sounds (MCQ),null,1,"{""no_of_questions_in_set"":10}",true,5,11,2026-02-25 04:06:43+00,null,null
+2,Letter Recognition (MCQ),null,2,"{""no_of_questions_in_set"":10}",true,5,11,2026-02-25 04:07:20+00,null,null
+3,Letter Recognition (Trainer Naming),null,3,"{""no_of_questions_in_set"":10}",true,5,11,2026-02-25 04:08:14+00,null,null
+4,Letter/Blend Sounds (Trainer Describing),null,4,"{""no_of_questions_in_set"":10}",true,5,11,2026-02-25 04:08:47+00,null,null

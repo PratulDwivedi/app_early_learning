@@ -13,8 +13,7 @@ class ApiRoutes {
   static const String startSession = 'edu.fn_start_session';
   static const String submitAnswer = 'edu.fn_submit_answer';
   static const String completeSession = 'edu.fn_complete_session';
-  static const String updatePassword = 'edu.fn_update_delegate_password';
-  static const String updateProfilePic = 'edu.fn_update_delegate_profile_pic';
+  static const String updateProfilePic = 'edu.fn_update_profile_pic';
   static const String uploadFile = 'edu/v1/upload-file';
   static const String summaryCount = 'edu.fn_get_student_summary';
   static const String fileMetadata = '';
@@ -40,18 +39,6 @@ class AppPageRoute {
   static const String reports = 'reports';
   static const String uploadQuestions = 'uploadQuestions';
   static const String offlineSync = 'offlineSync';
-}
-
-class AppPageIds {
-  static const int helpLine = 169;
-  static const int fromDgDesk = 141;
-  static const int exhibition = 142;
-  static const int registration = 143;
-  static const int aboutFai = 144;
-  static const int seminarTheme = 146;
-  static const int conferenceHotel = 147;
-  static const int culturalProgramme = 148;
-  static const int faqs = 149;
 }
 
 Map<String, IconData> pageIcons = {

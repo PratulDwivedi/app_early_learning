@@ -76,18 +76,7 @@ final updateProfilePictureProvider =
       return await service.updateProfilePicture(profilePicPath);
     });
 
-final updatePasswordProvider =
-    FutureProvider.family<ResponseMessageModel, Map<String, String>>((
-      ref,
-      passwords,
-    ) async {
-      final service = ref.watch(authServiceProvider);
-      return await service.updatePassword(
-        passwords['oldPassword']!,
-        passwords['newPassword']!,
-        passwords['confirmPassword']!,
-      );
-    });
+
 
 final changePasswordControllerProvider = StateNotifierProvider.autoDispose<
   ChangePasswordController,

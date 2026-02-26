@@ -190,124 +190,65 @@ class StudentReportContent extends ConsumerWidget {
               _buildSummaryCards(summaryData, colors, primaryColor),
               const SizedBox(height: 24),
 
-              // Pie Chart
-              Container(
-                decoration: BoxDecoration(
-                  color: colors.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: PieChartWidget(
-                  data: summaryData,
-                  title: 'Responses Distribution',
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Bar Chart
-              Container(
-                decoration: BoxDecoration(
-                  color: colors.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: BarChartWidget(
-                  data: summaryData,
-                  title: 'Response Breakdown',
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Detailed List
-              Text(
-                'Detailed Breakdown',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: colors.textColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...List.generate(summaryData.length, (index) {
-                final item = summaryData[index];
-                final name = item['name'] ?? 'Unknown';
-                final value = item['value'] ?? 0;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWideLayout = constraints.maxWidth >= 900;
+                  final pieChartCard = Container(
                     decoration: BoxDecoration(
                       color: colors.cardColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: primaryColor.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryColor.withOpacity(
-                              0.7 - (index * 0.1),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: TextStyle(
-                                  color: colors.textColor,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            value.toString(),
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                );
-              }),
+                    child: PieChartWidget(
+                      data: summaryData,
+                      title: 'Distribution',
+                    ),
+                  );
+
+                  final barChartCard = Container(
+                    decoration: BoxDecoration(
+                      color: colors.cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: BarChartWidget(
+                      data: summaryData,
+                      title: 'Breakdown',
+                    ),
+                  );
+
+                  if (isWideLayout) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: pieChartCard),
+                        const SizedBox(width: 16),
+                        Expanded(child: barChartCard),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      pieChartCard,
+                      const SizedBox(height: 24),
+                      barChartCard,
+                    ],
+                  );
+                },
+              ),
               ],
             ),
           );
@@ -370,31 +311,47 @@ class StudentReportContent extends ConsumerWidget {
       0,
       (sum, item) => sum + (item['value'] as int? ?? 0),
     );
+    final items = <Map<String, dynamic>>[
+      {
+        'label': 'Total',
+        'value': totalCount.toString(),
+        'color': primaryColor,
+      },
+      ...List.generate(data.length, (index) {
+        return {
+          'label': (data[index]['name'] as String? ?? 'Unknown').trim(),
+          'value': (data[index]['value'] ?? 0).toString(),
+          'color': primaryColor.withOpacity(0.7 - (index * 0.1)),
+        };
+      }),
+    ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildStatCard(
-            label: 'Total',
-            value: totalCount.toString(),
-            color: primaryColor,
-            colors: colors,
-          ),
-          const SizedBox(width: 12),
-          ...List.generate(
-            data.length,
-            (index) => _buildStatCard(
-              label: (data[index]['name'] as String? ?? 'Unknown')
-                  .split(' ')
-                  .first,
-              value: (data[index]['value'] ?? 0).toString(),
-              color: primaryColor.withOpacity(0.7 - (index * 0.1)),
-              colors: colors,
-            ),
-          ),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final maxWidth = constraints.maxWidth;
+        final computedColumns = (maxWidth / 150).floor().clamp(2, items.length);
+        final columns = computedColumns is int ? computedColumns : 2;
+        final cardWidth = (maxWidth - ((columns - 1) * spacing)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: cardWidth,
+                  child: _buildStatCard(
+                    label: item['label'] as String,
+                    value: item['value'] as String,
+                    color: item['color'] as Color,
+                    colors: colors,
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 
@@ -405,7 +362,8 @@ class StudentReportContent extends ConsumerWidget {
     required ThemeColors colors,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      constraints: const BoxConstraints(minHeight: 88),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -417,13 +375,19 @@ class StudentReportContent extends ConsumerWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: colors.hintColor)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            softWrap: true,
+            style: TextStyle(fontSize: 12, color: colors.hintColor),
+          ),
         ],
       ),
     );
