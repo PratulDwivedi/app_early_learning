@@ -5,6 +5,7 @@ import '../../common/widgets/app_logo_badge.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
+import '../../common/widgets/gradient_background.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 import '../../common/services/navigation_service.dart';
@@ -74,13 +75,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final colors = ref.watch(themeColorsProvider);
 
     return Scaffold(
-      backgroundColor: colors.bgColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.color_lens),
+            icon: const Icon(Icons.color_lens, color: Colors.white),
             onPressed: () {
               showModalBottomSheet(
                 context: context,
@@ -91,12 +94,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         ],
       ),
-      body: Container(
-        color: colors.bgColor,
+      body: GradientBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, kToolbarHeight + 24, 24, 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -107,19 +109,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   const SizedBox(height: 30),
 
                   // Title
-                  Text(
+                  const Text(
                     'Welcome Early Learning',
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: colors.textColor,
+                      color: Colors.white,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     'Sign in to continue',
-                    style: TextStyle(fontSize: 16, color: colors.hintColor),
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                   const SizedBox(height: 40),
 

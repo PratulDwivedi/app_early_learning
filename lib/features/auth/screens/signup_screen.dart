@@ -6,6 +6,7 @@ import '../../common/widgets/app_logo_badge.dart';
 import '../../common/widgets/theme_selector.dart';
 import '../../common/widgets/custom_text_form_field.dart';
 import '../../common/widgets/custom_button.dart';
+import '../../common/widgets/gradient_background.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 import '../../common/services/navigation_service.dart';
@@ -101,17 +102,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     final useMultiColumn = _shouldUseMultiColumnLayout(context);
 
     return Scaffold(
-      backgroundColor: colors.bgColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => NavigationService.goBack(),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.color_lens),
+            icon: const Icon(Icons.color_lens, color: Colors.white),
             onPressed: () {
               showModalBottomSheet(
                 context: context,
@@ -122,12 +125,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
           ),
         ],
       ),
-      body: Container(
-        color: colors.bgColor,
+      body: GradientBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, kToolbarHeight + 24, 24, 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -138,17 +140,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                   const SizedBox(height: 20),
 
                   // Title
-                  Text(
+                  const Text(
                     'Create Account',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: colors.textColor,
+                      color: Colors.white,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 20),
-                
+
                   // Signup Form Card
                   Container(
                     padding: const EdgeInsets.all(24),
