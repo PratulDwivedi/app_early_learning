@@ -8,11 +8,11 @@ import 'app_logo_badge.dart';
 import 'theme_selector.dart';
 
 class GradientHeader extends ConsumerWidget {
-  final TextEditingController? searchController;
+  final VoidCallback? onRefresh;
 
   const GradientHeader({
     super.key,
-    this.searchController,
+    this.onRefresh,
   });
 
   @override
@@ -79,32 +79,7 @@ class GradientHeader extends ConsumerWidget {
                         backgroundColor: Colors.white.withOpacity(0.2),
                       ),
                     ),
-                    if (currentUser?.data.isAdmin == true) ...[
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SizedBox(
-                          height: 44,
-                          child: TextFormField(
-                            controller: searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Search Kid...',
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: colors.cardColor,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 0,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 8),
+                    const Spacer(),
                     Row(
                       children: [
                         IconButton(
@@ -113,6 +88,7 @@ class GradientHeader extends ConsumerWidget {
                             await ref
                                 .read(authProvider.notifier)
                                 .refreshUserFromServer();
+                            onRefresh?.call();
                           },
                           icon: const Icon(Icons.refresh, color: Colors.white),
                           style: IconButton.styleFrom(
@@ -222,7 +198,7 @@ class GradientHeader extends ConsumerWidget {
                                 );
                               },
                               icon: const Icon(Icons.list_alt_rounded),
-                              label: const Text('Questions'),
+                              label: const Text('Question Bank'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.9),
                                 foregroundColor: primaryColor,

@@ -1,33 +1,44 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../common/widgets/common_gradient_header_widget.dart';
-import '../../common/services/navigation_service.dart';
-import '../../common/models/screen_args_model.dart';
+
+import '../../../config/app_constants.dart';
 import '../../common/models/response_message_model.dart';
+import '../../common/models/screen_args_model.dart';
+import '../../common/providers/student_provider.dart';
+import '../../common/services/navigation_service.dart';
+import '../../common/widgets/common_gradient_header_widget.dart';
+import '../models/theme_colors.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
-import '../../common/providers/student_provider.dart';
-import '../../../config/app_constants.dart';
 
-class StudentsListScreen extends ConsumerWidget {
+class StudentsListScreen extends ConsumerStatefulWidget {
   const StudentsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudentsListScreen> createState() => _StudentsListScreenState();
+}
+
+class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
+  int _refreshSignal = 0;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CommonGradientHeader(
-              title: 'My Students',
-              onRefresh: () {
-                ref.invalidate(getStudentsProvider);
-              },
-            ),
-            const StudentsListView(),
-          ],
-        ),
+      body: Column(
+        children: [
+          CommonGradientHeader(
+            title: 'My Students',
+            onRefresh: () {
+              setState(() {
+                _refreshSignal++;
+              });
+            },
+          ),
+          Expanded(
+            child: StudentsListView(refreshSignal: _refreshSignal),
+          ),
+        ],
       ),
     );
   }
@@ -35,11 +46,11 @@ class StudentsListScreen extends ConsumerWidget {
 
 // Reusable students list view (can be embedded in home screen)
 class StudentsListView extends ConsumerStatefulWidget {
-  final String searchQuery;
+  final int refreshSignal;
 
   const StudentsListView({
     super.key,
-    this.searchQuery = '',
+    this.refreshSignal = 0,
   });
 
   @override
@@ -47,7 +58,59 @@ class StudentsListView extends ConsumerStatefulWidget {
 }
 
 class _StudentsListViewState extends ConsumerState<StudentsListView> {
+  static const int _firstPageIndex = 1;
+  static const int _defaultPageSize = 4;
+  static const double _nextPageTriggerOffset = 220;
+
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+
   bool _isHandlingJwtExpiry = false;
+  bool _isInitialLoading = true;
+  bool _isLoadingMore = false;
+  String? _loadError;
+  String _searchQuery = '';
+
+  int _currentPageIndex = 0;
+  int _pageSize = 0;
+  int _totalRecords = 0;
+
+  final List<Map<String, dynamic>> _students = <Map<String, dynamic>>[];
+
+  bool get _hasMorePages =>
+      _totalRecords > 0 && _students.length < _totalRecords;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _searchController.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshStudents();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant StudentsListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshSignal != widget.refreshSignal) {
+      _refreshStudents();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
 
   bool _isJwtExpiredResponse(ResponseMessageModel response) {
     final message = response.message.toLowerCase();
@@ -86,347 +149,576 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
   }
 
   double _studentCardAspectRatio(BuildContext context, int crossAxisCount) {
-    if (crossAxisCount == 1) return 2.9;
+    if (crossAxisCount == 1) return 3.8;
     final width = MediaQuery.of(context).size.width;
-    if (width >= 1400) return 2.6;
-    if (width >= 1000) return 2.4;
-    return 2.3;
+    if (width >= 1400) return 3.1;
+    if (width >= 1000) return 3.0;
+    return 3.2;
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoadingMore || _isInitialLoading) {
+      return;
+    }
+
+    final remaining = _scrollController.position.extentAfter;
+    if (remaining <= _nextPageTriggerOffset && _hasMorePages) {
+      _loadNextPage();
+    }
+  }
+
+  Future<void> _refreshStudents() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isInitialLoading = true;
+      _isLoadingMore = false;
+      _loadError = null;
+      _currentPageIndex = 0;
+      _pageSize = _defaultPageSize;
+      _totalRecords = 0;
+      _students.clear();
+    });
+
+    await _loadPage(pageIndex: _firstPageIndex, reset: true);
+  }
+
+  Future<void> _loadNextPage() async {
+    if (_isInitialLoading || _isLoadingMore || !_hasMorePages) return;
+    final nextPage = _currentPageIndex + 1;
+    await _loadPage(pageIndex: nextPage);
+  }
+
+  Future<void> _loadPage({
+    required int pageIndex,
+    bool reset = false,
+  }) async {
+    if (!mounted) return;
+
+    setState(() {
+      if (reset) {
+        _isInitialLoading = true;
+      } else {
+        _isLoadingMore = true;
+      }
+      _loadError = null;
+    });
+
+    try {
+      final effectivePageSize = _pageSize > 0 ? _pageSize : _defaultPageSize;
+      final params = StudentsPagingParams(
+        pageIndex: pageIndex,
+        pageSize: effectivePageSize,
+      );
+
+      final response = reset
+          ? await ref.refresh(getStudentsProvider(params).future)
+          : await ref.read(getStudentsProvider(params).future);
+
+      if (!mounted) return;
+
+      if (_isJwtExpiredResponse(response)) {
+        _handleJwtExpired();
+        setState(() {
+          _isInitialLoading = false;
+          _isLoadingMore = false;
+        });
+        return;
+      }
+
+      if (!response.isSuccess) {
+        setState(() {
+          _loadError = response.message;
+          _isInitialLoading = false;
+          _isLoadingMore = false;
+        });
+        return;
+      }
+
+      final paging = response.paging;
+      final nextRecords = response.data;
+
+      setState(() {
+        if (reset) {
+          _students.clear();
+        }
+
+        final seenIds = _students
+            .map((student) => student['id'])
+            .where((id) => id != null)
+            .toSet();
+
+        for (final student in nextRecords) {
+          final id = student['id'];
+          if (id != null && seenIds.contains(id)) {
+            continue;
+          }
+          _students.add(student);
+          if (id != null) {
+            seenIds.add(id);
+          }
+        }
+
+        _currentPageIndex = paging?.pageIndex ?? pageIndex;
+        _pageSize = paging?.pageSize ?? effectivePageSize;
+        _totalRecords = paging?.totalRecords ?? _students.length;
+        _isInitialLoading = false;
+        _isLoadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error.toString();
+        _isInitialLoading = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  Widget _messageCard({
+    required Color iconColor,
+    required ThemeColors colors,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    bool isError = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: isError ? Border.all(color: Colors.red, width: 1) : null,
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: isError ? Colors.red : iconColor, size: 40),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              color: colors.textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(color: colors.hintColor, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
-    final studentsAsync = ref.watch(getStudentsProvider);
     final isAdminUser = ref.watch(authProvider)?.data.isAdmin == true;
-    final normalizedSearchQuery = widget.searchQuery.toLowerCase();
+    final normalizedSearchQuery = _searchQuery;
+
+    if (_isInitialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loadError != null && _students.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(10),
+        child: _messageCard(
+          iconColor: primaryColor,
+          colors: colors,
+          icon: Icons.error_outline,
+          title: 'Error loading students',
+          subtitle: _loadError,
+          isError: true,
+        ),
+      );
+    }
+
+    if (_students.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(10),
+        child: _messageCard(
+          iconColor: primaryColor,
+          colors: colors,
+          icon: Icons.person_search,
+          title: 'No students found',
+          subtitle: 'Add your first student to get started',
+        ),
+      );
+    }
+
+    final filteredStudents = _students.where((student) {
+      final firstName = (student['first_name'] ?? '').toString().toLowerCase();
+      final lastName = (student['last_name'] ?? '').toString().toLowerCase();
+      final email = (student['email'] ?? '').toString().toLowerCase();
+      return firstName.contains(normalizedSearchQuery) ||
+          lastName.contains(normalizedSearchQuery) ||
+          (isAdminUser && email.contains(normalizedSearchQuery));
+    }).toList();
+
+    final crossAxisCount = _gridCrossAxisCount(context);
+    final pagingText =
+        'Page: $_currentPageIndex | Size: ${_pageSize > 0 ? _pageSize : '-'} | Total: $_totalRecords';
 
     return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          studentsAsync.when(
-            loading: () => Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colors.cardColor,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-            error: (error, stack) => Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colors.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.red, width: 1),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Error loading students',
-                    style: TextStyle(
-                      color: colors.textColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString(),
-                    style: TextStyle(color: colors.hintColor, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            data: (response) {
-              if (!response.isSuccess || response.data.isEmpty) {
-                if (_isJwtExpiredResponse(response)) {
-                  _handleJwtExpired();
-                  return Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colors.cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colors.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.person_search, color: primaryColor, size: 48),
-                      const SizedBox(height: 12),
-                      Text(
-                        response.message,
-                        style: TextStyle(
-                          color: colors.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add your first student to get started',
-                        style: TextStyle(color: colors.hintColor, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // Filter students based on search query
-              final filteredStudents = response.data.where((student) {
-                final firstName = (student['first_name'] ?? '').toLowerCase();
-                final lastName = (student['last_name'] ?? '').toLowerCase();
-                final email = (student['email'] ?? '').toLowerCase();
-                return firstName.contains(normalizedSearchQuery) ||
-                    lastName.contains(normalizedSearchQuery) ||
-                    (isAdminUser && email.contains(normalizedSearchQuery));
-              }).toList();
-
-              // Show no results message if search has results but all filtered out
-              if (filteredStudents.isEmpty && normalizedSearchQuery.isNotEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colors.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.person_search, color: primaryColor, size: 48),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No Students Match',
-                        style: TextStyle(
-                          color: colors.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Try a different search term',
-                        style: TextStyle(color: colors.hintColor, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final crossAxisCount = _gridCrossAxisCount(context);
-              return Column(
-                children: [
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredStudents.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: _studentCardAspectRatio(
-                        context,
-                        crossAxisCount,
-                      ),
-                    ),
-                    itemBuilder: (context, index) {
-                      final student = filteredStudents[index];
-                      final firstName = student['first_name'] ?? 'Unknown';
-                      final lastName = student['last_name'] ?? '';
-                      final grade = student['grade'] ?? '-';
-                      final email = student['email'] ?? '';
-                      final avatarLetter = firstName.toString().isNotEmpty
-                          ? firstName.toString()[0].toUpperCase()
-                          : 'S';
-
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            final args = ScreenArgsModel(
-                              routeName: AppPageRoute.evaluation,
-                              name: 'Evaluation',
-                              data: student,
-                            );
-                            NavigationService.navigateTo(
-                              args.routeName,
-                              arguments: args,
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: colors.cardColor,
+      padding: const EdgeInsets.all(10),
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PinnedSearchHeaderDelegate(
+              minHeight: 58,
+              maxHeight: 58,
+              child: Container(
+                color: colors.bgColor,
+                padding: const EdgeInsets.only(bottom: 8),
+                alignment: Alignment.center,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 44,
+                        child: TextFormField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search Kid...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: normalizedSearchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: colors.cardColor,
+                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: primaryColor.withOpacity(0.3),
-                                width: 1,
-                              ),
+                              borderSide: BorderSide.none,
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        primaryColor.withOpacity(0.8),
-                                        primaryColor,
-                                      ],
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      avatarLetter,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '$firstName $lastName',
-                                        style: TextStyle(
-                                          color: colors.textColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      if (isAdminUser)
-                                        Text(
-                                          email.toString(),
-                                          style: TextStyle(
-                                            color: colors.hintColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.school_outlined,
-                                            size: 14,
-                                            color: colors.hintColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Grade: $grade',
-                                            style: TextStyle(
-                                              color: colors.hintColor,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuButton(
-                                  itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.edit),
-                                          SizedBox(width: 8),
-                                          Text('View / Edit'),
-                                        ],
-                                      ),
-                                      onTap: () async {
-                                        final args = ScreenArgsModel(
-                                          routeName: AppPageRoute.addstudent,
-                                          name: 'Edit Kid',
-                                          data: student,
-                                        );
-                                        final updated =
-                                            await NavigationService.navigateTo(
-                                          args.routeName,
-                                          arguments: args,
-                                        );
-                                        if (updated == true) {
-                                          ref.invalidate(getStudentsProvider);
-                                        }
-                                      },
-                                    ),
-                                    PopupMenuItem(
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.question_answer),
-                                          SizedBox(width: 8),
-                                          Text('Evaluate'),
-                                        ],
-                                      ),
-                                      onTap: () {
-                                        final args = ScreenArgsModel(
-                                          routeName: AppPageRoute.evaluation,
-                                          name: 'Evaluation',
-                                          data: student,
-                                        );
-                                        NavigationService.navigateTo(
-                                          args.routeName,
-                                          arguments: args,
-                                        );
-                                      },
-                                    ),
-                                    PopupMenuItem(
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.add_chart_rounded),
-                                          SizedBox(width: 8),
-                                          Text('Report Card'),
-                                        ],
-                                      ),
-                                      onTap: () {
-                                        ScreenArgsModel screenArgsModel = ScreenArgsModel(
-                                          routeName: AppPageRoute.reports,
-                                          name:
-                                              '$firstName $lastName - Report Card',
-                                          data: student,
-                                        );
-                                        NavigationService.navigateTo(
-                                          screenArgsModel.routeName,
-                                          arguments: screenArgsModel,
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 0,
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: Row(
+                        children: [
+                          if (_isLoadingMore)
+                            const SizedBox(
+                              height: 14,
+                              width: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          if (_isLoadingMore) const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              pagingText,
+                              style: TextStyle(
+                                color: colors.hintColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (filteredStudents.isEmpty && normalizedSearchQuery.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _messageCard(
+                  iconColor: primaryColor,
+                  colors: colors,
+                  icon: Icons.person_search,
+                  title: 'No Kids Match',
+                  subtitle: 'Try a different search term',
+                ),
+              ),
+            )
+          else
+            SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final student = filteredStudents[index];
+                  final firstName = student['first_name'] ?? 'Unknown';
+                  final lastName = student['last_name'] ?? '';
+                  final grade = student['grade'] ?? '-';
+                  final email = student['email'] ?? '';
+                  final avatarLetter = firstName.toString().isNotEmpty
+                      ? firstName.toString()[0].toUpperCase()
+                      : 'S';
+
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        final args = ScreenArgsModel(
+                          routeName: AppPageRoute.evaluation,
+                          name: 'Evaluation',
+                          data: student,
+                        );
+                        NavigationService.navigateTo(
+                          args.routeName,
+                          arguments: args,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: primaryColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    primaryColor.withOpacity(0.8),
+                                    primaryColor,
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  avatarLetter,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$firstName $lastName',
+                                    style: TextStyle(
+                                      color: colors.textColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (isAdminUser)
+                                    Text(
+                                      email.toString(),
+                                      style: TextStyle(
+                                        color: colors.hintColor,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.school_outlined,
+                                        size: 13,
+                                        color: colors.hintColor,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'Grade: $grade',
+                                        style: TextStyle(
+                                          color: colors.hintColor,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 28,
+                                height: 28,
+                              ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.edit),
+                                      SizedBox(width: 8),
+                                      Text('View / Edit'),
+                                    ],
+                                  ),
+                                  onTap: () async {
+                                    final args = ScreenArgsModel(
+                                      routeName: AppPageRoute.addstudent,
+                                      name: 'Edit Kid',
+                                      data: student,
+                                    );
+                                    final updated =
+                                        await NavigationService.navigateTo(
+                                      args.routeName,
+                                      arguments: args,
+                                    );
+                                    if (updated == true) {
+                                      _refreshStudents();
+                                    }
+                                  },
+                                ),
+                                PopupMenuItem(
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.question_answer),
+                                      SizedBox(width: 8),
+                                      Text('Evaluate'),
+                                    ],
+                                  ),
+                                  onTap: () {
+                                    final args = ScreenArgsModel(
+                                      routeName: AppPageRoute.evaluation,
+                                      name: 'Evaluation',
+                                      data: student,
+                                    );
+                                    NavigationService.navigateTo(
+                                      args.routeName,
+                                      arguments: args,
+                                    );
+                                  },
+                                ),
+                                PopupMenuItem(
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.add_chart_rounded),
+                                      SizedBox(width: 8),
+                                      Text('Report Card'),
+                                    ],
+                                  ),
+                                  onTap: () {
+                                    final screenArgsModel = ScreenArgsModel(
+                                      routeName: AppPageRoute.reports,
+                                      name:
+                                          '$firstName $lastName - Report Card',
+                                      data: student,
+                                    );
+                                    NavigationService.navigateTo(
+                                      screenArgsModel.routeName,
+                                      arguments: screenArgsModel,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                childCount: filteredStudents.length,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: _studentCardAspectRatio(
+                  context,
+                  crossAxisCount,
+                ),
+              ),
+            ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  if (!_isLoadingMore && _loadError != null && _students.isNotEmpty)
+                    Text(
+                      _loadError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
                 ],
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _PinnedSearchHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+
+  const _PinnedSearchHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+  });
+
+  @override
+  double get minExtent => minHeight;
+
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedSearchHeaderDelegate oldDelegate) {
+    return minHeight != oldDelegate.minHeight ||
+        maxHeight != oldDelegate.maxHeight ||
+        child != oldDelegate.child;
   }
 }

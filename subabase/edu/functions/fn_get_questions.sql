@@ -1,22 +1,25 @@
-create or replace function edu.fn_get_questions (
-  p_question_type_id bigint default null::bigint,
-  p_id bigint default null::bigint,
-  p_is_active boolean default true,
-  p_page_index integer default 1,
-  p_page_size integer default 20
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER as $function$
+CREATE OR REPLACE FUNCTION edu.fn_get_questions (
+  p_question_type_id  bigint   DEFAULT NULL::bigint,
+  p_id                bigint   DEFAULT NULL::bigint,
+  p_page_index        integer  DEFAULT 1,
+  p_page_size         integer  DEFAULT 20
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $function$
 /*
 ================================================
 Copyright     : Early Learning App, 2026
 Created By    :
 Created Date  :
-Description   : Fetch paginated list of questions
-                joined with question_types.
-                Optionally filter by question_type_id.
+Description   : Fetch paginated list of questions joined with question_types.
+                Pagination (p_page_index / p_page_size) is applied PER question_type
+                using ROW_NUMBER() PARTITION BY question_type_id.
+                Output is a single flat data array.
+
 SET LOCAL request.jwt.claim.sub = 'c8ae012c-e272-4651-8162-72ca91a85000';
+
 SELECT edu.fn_get_questions();
 SELECT edu.fn_get_questions(p_question_type_id := 1);
 SELECT edu.fn_get_questions(p_question_type_id := 1, p_page_index := 2, p_page_size := 10);
+SELECT edu.fn_get_questions(p_id := 42);
 ================================================
 */
 DECLARE
@@ -32,7 +35,7 @@ BEGIN
     INTO v_tenant_id, v_user_id, v_caller_id
     FROM public.fn_get_request_context('edu.fn_get_questions');
 
-    -- ── Validations ──────────────────────────────────────────
+    -- ── Validations ───────────────────────────────────────────
 
     IF p_page_index < 1 THEN
       RAISE EXCEPTION 'page_index must be >= 1.';
@@ -44,16 +47,17 @@ BEGIN
 
     v_offset := (p_page_index - 1) * p_page_size;
 
-    -- ── Total count (before pagination) ──────────────────────
+    -- ── Total count (distinct questions that would appear across all types) ───
 
     SELECT COUNT(*)
     INTO v_total_records
     FROM edu.questions q
-    WHERE q.tenant_id = v_tenant_id
-      AND q.is_active = p_is_active
-      AND (p_question_type_id IS NULL OR q.question_type_id = p_question_type_id);
+    WHERE q.tenant_id  = v_tenant_id
+      AND q.is_active  = true
+      AND (p_question_type_id IS NULL OR q.question_type_id = p_question_type_id)
+      AND (p_id        IS NULL OR q.id = p_id);
 
-    -- ── Paginated result with question_type join ──────────────
+    -- ── Paginated result partitioned by question_type_id ─────────────────────
 
     SELECT COALESCE(jsonb_agg(row), '[]'::jsonb)
     INTO v_result
@@ -82,18 +86,25 @@ BEGIN
                                     'data',     qt.data
                                   )
       ) AS row
-      FROM edu.questions q
+      FROM (
+        SELECT q.*,
+               ROW_NUMBER() OVER (
+                 PARTITION BY q.question_type_id
+                 ORDER BY q.sort_order ASC, q.id ASC
+               ) AS rn
+        FROM edu.questions q
+        WHERE q.tenant_id  = v_tenant_id
+          AND q.is_active  = true
+          AND (p_question_type_id IS NULL OR q.question_type_id = p_question_type_id)
+          AND (p_id        IS NULL OR q.id = p_id)
+      ) q
       INNER JOIN edu.question_types qt
         ON  qt.id        = q.question_type_id
         AND qt.tenant_id = v_tenant_id
         AND qt.is_active = true
-      WHERE q.tenant_id  = v_tenant_id
-        AND q.is_active  = p_is_active
-        AND (p_question_type_id IS NULL OR q.question_type_id = p_question_type_id)
-        AND (p_id IS NULL OR q.id = p_id)
-      ORDER BY q.sort_order ASC, q.id ASC
-      LIMIT  p_page_size
-      OFFSET v_offset
+      WHERE q.rn > v_offset
+        AND q.rn <= (v_offset + p_page_size)
+      ORDER BY qt.id ASC, q.sort_order ASC, q.id ASC
     ) t;
 
     RETURN public.fn_response_success(
@@ -114,4 +125,4 @@ BEGIN
     );
   END;
 END;
-$function$
+$function$;

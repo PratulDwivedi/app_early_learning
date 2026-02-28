@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../auth/models/guardian_model.dart';
 import '../services/edu_service.dart';
 import '../models/student_model.dart';
 import '../models/response_message_model.dart';
@@ -19,10 +18,35 @@ final saveStudentProvider = FutureProvider.autoDispose
 );
 
 // Students List Provider - with autoDispose for fresh data
-final getStudentsProvider = FutureProvider.autoDispose<ResponseMessageModel>(
-  (ref) async {
+class StudentsPagingParams {
+  final int pageIndex;
+  final int? pageSize;
+
+  const StudentsPagingParams({
+    this.pageIndex = 1,
+    this.pageSize,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StudentsPagingParams &&
+        other.pageIndex == pageIndex &&
+        other.pageSize == pageSize;
+  }
+
+  @override
+  int get hashCode => Object.hash(pageIndex, pageSize);
+}
+
+final getStudentsProvider = FutureProvider.autoDispose
+    .family<ResponseMessageModel, StudentsPagingParams>(
+  (ref, params) async {
     final service = ref.watch(eduServiceProvider);
-    return service.getStudents();
+    return service.getStudents(
+      pageIndex: params.pageIndex,
+      pageSize: params.pageSize,
+    );
   },
 );
 
@@ -71,20 +95,36 @@ final studentFormProvider =
 });
 
 
-// Guardians List Provider - with autoDispose for fresh data
-final getGuardiansProvider = FutureProvider.autoDispose<List<Guardian>>(
-  (ref) async {
+class GuardiansPagingParams {
+  final int pageIndex;
+  final int? pageSize;
+
+  const GuardiansPagingParams({
+    this.pageIndex = 1,
+    this.pageSize,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GuardiansPagingParams &&
+        other.pageIndex == pageIndex &&
+        other.pageSize == pageSize;
+  }
+
+  @override
+  int get hashCode => Object.hash(pageIndex, pageSize);
+}
+
+// Guardians List Provider - paged
+final getGuardiansProvider = FutureProvider.autoDispose
+    .family<ResponseMessageModel, GuardiansPagingParams>(
+  (ref, params) async {
     final service = ref.watch(eduServiceProvider);
-    final response = await service.getGuardians();
-    
-    if (response.isSuccess && response.data.isNotEmpty) {
-      // Parse the list of guardians from response data
-      final guardiansList = (response.data as List)
-          .map((item) => Guardian.fromJson(item as Map<String, dynamic>))
-          .toList();
-      return guardiansList;
-    }
-    return [];
+    return service.getGuardians(
+      pageIndex: params.pageIndex,
+      pageSize: params.pageSize,
+    );
   },
 );
 

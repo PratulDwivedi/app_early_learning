@@ -14,25 +14,7 @@ class EduHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _EduHomeScreenState extends ConsumerState<EduHomeScreen> {
-  late final TextEditingController _searchController;
-  String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  int _refreshSignal = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -47,19 +29,15 @@ class _EduHomeScreenState extends ConsumerState<EduHomeScreen> {
           child: Column(
             children: [
               GradientHeader(
-                searchController: _searchController,
+                onRefresh: () {
+                  setState(() {
+                    _refreshSignal++;
+                  });
+                },
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        StudentsListView(searchQuery: _searchQuery),
-                      ],
-                    ),
-                  ),
+                child: StudentsListView(
+                  refreshSignal: _refreshSignal,
                 ),
               ),
             ],

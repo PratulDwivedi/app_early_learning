@@ -24,9 +24,10 @@
       "deviceId": "ZA222N2QGK"
     },
     {
-      "name": "iPad-Simulator",
+      "name": "iPad Pro 11-inch (M5)",
       "request": "launch",
-      "type": "dart"
+      "type": "dart",
+      "deviceId": "60CFB373-A271-445D-AC2B-B87164A5B833"
     },
     {
       "name": "iPhone-Pratul",

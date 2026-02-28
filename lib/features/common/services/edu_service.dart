@@ -15,7 +15,10 @@ abstract class EduService {
   Future<ResponseMessageModel> getSummaryCount();
   Future<ResponseMessageModel> getHtmlContent(int pageId);
   Future<ResponseMessageModel> saveStudent(Student student);
-  Future<ResponseMessageModel> getStudents();
+  Future<ResponseMessageModel> getStudents({
+    int pageIndex = 1,
+    int? pageSize,
+  });
   Future<ResponseMessageModel> saveQuestion(Map<String, dynamic> payload);
   Future<ResponseMessageModel> saveQuestions(
     List<Map<String, dynamic>> questions,
@@ -30,5 +33,8 @@ abstract class EduService {
     int timeTakenSec,
   );
   Future<ResponseMessageModel> completeSession(int sessionId, String status);
-  Future<ResponseMessageModel> getGuardians();
+  Future<ResponseMessageModel> getGuardians({
+    int pageIndex = 1,
+    int? pageSize,
+  });
 }
