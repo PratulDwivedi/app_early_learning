@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/app_constants.dart';
@@ -35,9 +36,7 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
               });
             },
           ),
-          Expanded(
-            child: StudentsListView(refreshSignal: _refreshSignal),
-          ),
+          Expanded(child: StudentsListView(refreshSignal: _refreshSignal)),
         ],
       ),
     );
@@ -48,10 +47,7 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
 class StudentsListView extends ConsumerStatefulWidget {
   final int refreshSignal;
 
-  const StudentsListView({
-    super.key,
-    this.refreshSignal = 0,
-  });
+  const StudentsListView({super.key, this.refreshSignal = 0});
 
   @override
   ConsumerState<StudentsListView> createState() => _StudentsListViewState();
@@ -189,10 +185,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     await _loadPage(pageIndex: nextPage);
   }
 
-  Future<void> _loadPage({
-    required int pageIndex,
-    bool reset = false,
-  }) async {
+  Future<void> _loadPage({required int pageIndex, bool reset = false}) async {
     if (!mounted) return;
 
     setState(() {
@@ -462,202 +455,182 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
             )
           else
             SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final student = filteredStudents[index];
-                  final firstName = student['first_name'] ?? 'Unknown';
-                  final lastName = student['last_name'] ?? '';
-                  final grade = student['grade'] ?? '-';
-                  final email = student['email'] ?? '';
-                  final avatarLetter = firstName.toString().isNotEmpty
-                      ? firstName.toString()[0].toUpperCase()
-                      : 'S';
-
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        final args = ScreenArgsModel(
-                          routeName: AppPageRoute.evaluation,
-                          name: 'Evaluation',
-                          data: student,
-                        );
-                        NavigationService.navigateTo(
-                          args.routeName,
-                          arguments: args,
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final student = filteredStudents[index];
+                final firstName = student['first_name'] ?? 'Unknown';
+                final lastName = student['last_name'] ?? '';
+                final grade = student['grade'] ?? '-';
+                final email = student['email'] ?? '';
+                final avatarLetter = firstName.toString().isNotEmpty
+                    ? firstName.toString()[0].toUpperCase()
+                    : 'S';
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      final args = ScreenArgsModel(
+                        routeName: AppPageRoute.evaluation,
+                        name: 'Evaluation',
+                        data: student,
+                      );
+                      NavigationService.navigateTo(
+                        args.routeName,
+                        arguments: args,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: primaryColor.withOpacity(0.3),
+                          width: 1,
                         ),
-                        decoration: BoxDecoration(
-                          color: colors.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: primaryColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    primaryColor.withOpacity(0.8),
-                                    primaryColor,
-                                  ],
-                                ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  primaryColor.withOpacity(0.8),
+                                  primaryColor,
+                                ],
                               ),
-                              child: Center(
-                                child: Text(
-                                  avatarLetter,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                avatarLetter,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$firstName $lastName',
+                                  style: TextStyle(
+                                    color: colors.textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (isAdminUser)
                                   Text(
-                                    '$firstName $lastName',
+                                    email.toString(),
                                     style: TextStyle(
-                                      color: colors.textColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      color: colors.hintColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  if (isAdminUser)
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.school_outlined,
+                                      size: 13,
+                                      color: colors.hintColor,
+                                    ),
+                                    const SizedBox(width: 3),
                                     Text(
-                                      email.toString(),
+                                      'Grade: $grade',
                                       style: TextStyle(
                                         color: colors.hintColor,
-                                        fontWeight: FontWeight.w600,
                                         fontSize: 11,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.school_outlined,
-                                        size: 13,
-                                        color: colors.hintColor,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        'Grade: $grade',
-                                        style: TextStyle(
-                                          color: colors.hintColor,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 28,
-                                height: 28,
-                              ),
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.edit),
-                                      SizedBox(width: 8),
-                                      Text('View / Edit'),
-                                    ],
-                                  ),
-                                  onTap: () async {
-                                    final args = ScreenArgsModel(
-                                      routeName: AppPageRoute.addstudent,
-                                      name: 'Edit Kid',
-                                      data: student,
-                                    );
-                                    final updated =
-                                        await NavigationService.navigateTo(
-                                      args.routeName,
-                                      arguments: args,
-                                    );
-                                    if (updated == true) {
-                                      _refreshStudents();
-                                    }
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.question_answer),
-                                      SizedBox(width: 8),
-                                      Text('Evaluate'),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    final args = ScreenArgsModel(
-                                      routeName: AppPageRoute.evaluation,
-                                      name: 'Evaluation',
-                                      data: student,
-                                    );
-                                    NavigationService.navigateTo(
-                                      args.routeName,
-                                      arguments: args,
-                                    );
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.add_chart_rounded),
-                                      SizedBox(width: 8),
-                                      Text('Report Card'),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    final screenArgsModel = ScreenArgsModel(
-                                      routeName: AppPageRoute.reports,
-                                      name:
-                                          '$firstName $lastName - Report Card',
-                                      data: student,
-                                    );
-                                    NavigationService.navigateTo(
-                                      screenArgsModel.routeName,
-                                      arguments: screenArgsModel,
-                                    );
-                                  },
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+
+                          // ── Direct action buttons ──────────────────────────
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Edit button
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () async {
+                                  final args = ScreenArgsModel(
+                                    routeName: AppPageRoute.addstudent,
+                                    name: 'Edit Kid',
+                                    data: student,
+                                  );
+                                  final updated =
+                                      await NavigationService.navigateTo(
+                                        args.routeName,
+                                        arguments: args,
+                                      );
+                                  if (updated == true) {
+                                    _refreshStudents();
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(
+                                    Icons.edit_outlined,
+                                    size: 25,
+                                    color: colors.hintColor,
+                                  ),
+                                ),
+                              ),
+                              // Report Card button
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () {
+                                  final screenArgsModel = ScreenArgsModel(
+                                    routeName: AppPageRoute.reports,
+                                    name: '$firstName $lastName - Report Card',
+                                    data: student,
+                                  );
+                                  NavigationService.navigateTo(
+                                    screenArgsModel.routeName,
+                                    arguments: screenArgsModel,
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(
+                                    Icons.add_chart_rounded,
+                                    size: 25,
+                                    color: colors.hintColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          // ──────────────────────────────────────────────────
+                        ],
                       ),
                     ),
-                  );
-                },
-                childCount: filteredStudents.length,
-              ),
+                  ),
+                );
+              }, childCount: filteredStudents.length),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 12,
@@ -673,7 +646,9 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Column(
                 children: [
-                  if (!_isLoadingMore && _loadError != null && _students.isNotEmpty)
+                  if (!_isLoadingMore &&
+                      _loadError != null &&
+                      _students.isNotEmpty)
                     Text(
                       _loadError!,
                       style: const TextStyle(color: Colors.red, fontSize: 12),
