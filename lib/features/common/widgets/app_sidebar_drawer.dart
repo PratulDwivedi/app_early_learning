@@ -154,6 +154,23 @@ class AppSidebarDrawer extends ConsumerWidget {
                         );
                       },
                     ),
+                  if (currentUser?.data.isAdmin == true)
+                    _DrawerMenuItem(
+                      icon: Icons.settings_outlined,
+                      iconColor: primaryColor,
+                      title: 'Configuration',
+                      onTap: () {
+                        Navigator.pop(context);
+                        final screenArgsModel = ScreenArgsModel(
+                          routeName: AppPageRoute.configuration,
+                          name: 'Configuration',
+                        );
+                        NavigationService.navigateTo(
+                          screenArgsModel.routeName,
+                          arguments: screenArgsModel,
+                        );
+                      },
+                    ),
                   /*
                   _DrawerMenuItem(
                     icon: Icons.sync_alt_rounded,

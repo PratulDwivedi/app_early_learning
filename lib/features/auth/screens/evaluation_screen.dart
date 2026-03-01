@@ -22,6 +22,13 @@ class EvaluationScreen extends ConsumerStatefulWidget {
 }
 
 class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
+  static const List<Color> optionColors = [
+    Colors.blue,
+    Colors.purple,
+    Colors.teal,
+    Colors.indigo,
+  ];
+
   int? _selectedQuestionTypeId;
   bool _isStarted = false;
   bool _isStartingSession = false;
@@ -342,23 +349,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     return true;
   }
 
-  List<Color> _buildOptionPalette(Color seedColor) {
-    final seedHsl = HSLColor.fromColor(seedColor);
-    final hueShifts = [0.0, 45.0, 95.0, 150.0];
-    final saturation = (seedHsl.saturation + 0.18).clamp(0.55, 0.9).toDouble();
-    final lightness = seedHsl.lightness < 0.45 ? 0.58 : 0.52;
-
-    return hueShifts
-        .map(
-          (shift) => seedHsl
-              .withHue((seedHsl.hue + shift) % 360)
-              .withSaturation(saturation)
-              .withLightness(lightness)
-              .toColor(),
-        )
-        .toList();
-  }
-
   double _optionCardHeight(List<String> options) {
     if (options.isEmpty) return 90;
     final totalChars = options.fold<int>(0, (sum, item) => sum + item.length);
@@ -378,7 +368,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
     final questionTypesAsync = ref.watch(getQuestionTypesProvider);
-    final optionPalette = _buildOptionPalette(primaryColor);
 
     final currentQuestion =
         _isStarted && _sessionQuestions.isNotEmpty ? _sessionQuestions[_currentQuestionIndex] : null;
@@ -630,11 +619,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                                       cardWidth / optionCardHeight,
                                 ),
                                 itemBuilder: (context, index) {
-                                  final optionColor = index.isEven
-                                      ? primaryColor
-                                      : optionPalette[
-                                          index % optionPalette.length
-                                        ];
+                                  final optionColor =
+                                      optionColors[index % optionColors.length];
                                   final optionValue = options[index];
                                   final isSelected =
                                       _selectedOption == optionValue;

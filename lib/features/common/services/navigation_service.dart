@@ -10,6 +10,7 @@ import 'package:app_early_learning/features/auth/screens/guardians_screen.dart';
 import 'package:app_early_learning/features/auth/screens/student_report_screen.dart';
 import 'package:app_early_learning/features/auth/screens/upload_questions_screen.dart';
 import 'package:app_early_learning/features/auth/screens/offline_sync_screen.dart';
+import 'package:app_early_learning/features/auth/screens/configuration_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_constants.dart';
 import '../../auth/screens/login_screen.dart';
@@ -122,6 +123,12 @@ class NavigationService {
           return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => UploadQuestionsScreen(args: args),
+            ),
+          );
+        case AppPageRoute.configuration:
+          return navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const ConfigurationScreen(),
             ),
           );
         case AppPageRoute.offlineSync:

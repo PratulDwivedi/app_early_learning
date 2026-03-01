@@ -28,6 +28,11 @@ abstract class EduService {
     String searchText = '',
   });
   Future<ResponseMessageModel> getQuestionTypes();
+  Future<ResponseMessageModel> getConfig();
+  Future<ResponseMessageModel> saveConfig({
+    required int totalQuestions,
+    required int totalDurationMinutes,
+  });
   Future<ResponseMessageModel> getStudentSessions(int studentId);
   Future<ResponseMessageModel> startSession(
     int studentId, {

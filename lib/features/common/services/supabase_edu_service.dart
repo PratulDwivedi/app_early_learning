@@ -140,6 +140,28 @@ class SupabaseEduService implements EduService {
   }
 
   @override
+  Future<ResponseMessageModel> getConfig() async {
+    final response = await SupabaseApiHelper.post(ApiRoutes.getConfig, null);
+    return response;
+  }
+
+  @override
+  Future<ResponseMessageModel> saveConfig({
+    required int totalQuestions,
+    required int totalDurationMinutes,
+  }) async {
+    final payload = {
+      'p_name': 'Edu Configuration',
+      'p_data': {
+        'total_questions': totalQuestions,
+        'total_duration_minutes': totalDurationMinutes,
+      },
+    };
+    final response = await SupabaseApiHelper.post(ApiRoutes.saveConfig, payload);
+    return response;
+  }
+
+  @override
   Future<ResponseMessageModel> getStudentSessions(int studentId) async {
     final payload = {
       'p_student_id': studentId,

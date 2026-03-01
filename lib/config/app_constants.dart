@@ -10,6 +10,8 @@ class ApiRoutes {
   static const String savequestions = 'edu.fn_save_questions';
   static const String getQuestions = 'edu.fn_get_questions';
   static const String getQuestionTypes = 'edu.fn_get_question_types';
+  static const String getConfig = 'edu.fn_get_config';
+  static const String saveConfig = 'edu.fn_save_config';
   static const String getStudentSessions = 'edu.fn_get_student_sessions';
   static const String startSession = 'edu.fn_start_session';
   static const String submitAnswer = 'edu.fn_submit_answer';
@@ -40,6 +42,7 @@ class AppPageRoute {
   static const String guardians = 'guardians';
   static const String reports = 'reports';
   static const String uploadQuestions = 'uploadQuestions';
+  static const String configuration = 'configuration';
   static const String offlineSync = 'offlineSync';
 }
 
