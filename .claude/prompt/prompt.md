@@ -1,0 +1,3 @@
+- Split CLAUDE.md into its component rules. Use the claude code rule specification if you dont know what that means
+- Anything else we would need for efficient coding?
+- command as in chat prompt area. /int

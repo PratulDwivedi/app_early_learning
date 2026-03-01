@@ -57,11 +57,11 @@ class SupabaseEduService implements EduService {
   @override
   Future<ResponseMessageModel> getStudents({
     int pageIndex = 1,
-    int? pageSize,
+    String searchText = '',
   }) async {
     final payload = {
       'p_page_index': pageIndex,
-      if (pageSize != null && pageSize > 0) 'p_page_size': pageSize,
+      'p_search_text': searchText,
     };
     final response = await SupabaseApiHelper.post(ApiRoutes.getStudents, payload);
     return response;
@@ -118,8 +118,15 @@ class SupabaseEduService implements EduService {
   }
 
   @override
-  Future<ResponseMessageModel> getQuestions() async {
-    final response = await SupabaseApiHelper.post(ApiRoutes.getQuestions, null);
+  Future<ResponseMessageModel> getQuestions({
+    int pageIndex = 1,
+    String searchText = '',
+  }) async {
+    final payload = {
+      'p_page_index': pageIndex,
+      'p_search_text': searchText,
+    };
+    final response = await SupabaseApiHelper.post(ApiRoutes.getQuestions, payload);
     return response;
   }
 
@@ -178,11 +185,11 @@ class SupabaseEduService implements EduService {
   @override
   Future<ResponseMessageModel> getGuardians({
     int pageIndex = 1,
-    int? pageSize,
+    String searchText = '',
   }) async {
     final payload = {
       'p_page_index': pageIndex,
-      if (pageSize != null && pageSize > 0) 'p_page_size': pageSize,
+      'p_search_text': searchText,
     };
     final response = await SupabaseApiHelper.post(ApiRoutes.getGuardians, payload);
     return response;

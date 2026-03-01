@@ -20,11 +20,11 @@ final saveStudentProvider = FutureProvider.autoDispose
 // Students List Provider - with autoDispose for fresh data
 class StudentsPagingParams {
   final int pageIndex;
-  final int? pageSize;
+  final String searchText;
 
   const StudentsPagingParams({
     this.pageIndex = 1,
-    this.pageSize,
+    this.searchText = '',
   });
 
   @override
@@ -32,11 +32,11 @@ class StudentsPagingParams {
     if (identical(this, other)) return true;
     return other is StudentsPagingParams &&
         other.pageIndex == pageIndex &&
-        other.pageSize == pageSize;
+        other.searchText == searchText;
   }
 
   @override
-  int get hashCode => Object.hash(pageIndex, pageSize);
+  int get hashCode => Object.hash(pageIndex, searchText);
 }
 
 final getStudentsProvider = FutureProvider.autoDispose
@@ -45,7 +45,7 @@ final getStudentsProvider = FutureProvider.autoDispose
     final service = ref.watch(eduServiceProvider);
     return service.getStudents(
       pageIndex: params.pageIndex,
-      pageSize: params.pageSize,
+      searchText: params.searchText,
     );
   },
 );
@@ -97,11 +97,11 @@ final studentFormProvider =
 
 class GuardiansPagingParams {
   final int pageIndex;
-  final int? pageSize;
+  final String searchText;
 
   const GuardiansPagingParams({
     this.pageIndex = 1,
-    this.pageSize,
+    this.searchText = '',
   });
 
   @override
@@ -109,11 +109,11 @@ class GuardiansPagingParams {
     if (identical(this, other)) return true;
     return other is GuardiansPagingParams &&
         other.pageIndex == pageIndex &&
-        other.pageSize == pageSize;
+        other.searchText == searchText;
   }
 
   @override
-  int get hashCode => Object.hash(pageIndex, pageSize);
+  int get hashCode => Object.hash(pageIndex, searchText);
 }
 
 // Guardians List Provider - paged
@@ -123,7 +123,7 @@ final getGuardiansProvider = FutureProvider.autoDispose
     final service = ref.watch(eduServiceProvider);
     return service.getGuardians(
       pageIndex: params.pageIndex,
-      pageSize: params.pageSize,
+      searchText: params.searchText,
     );
   },
 );

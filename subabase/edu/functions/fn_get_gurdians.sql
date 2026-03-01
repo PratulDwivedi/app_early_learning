@@ -1,15 +1,22 @@
 CREATE OR REPLACE FUNCTION edu.fn_get_gurdians(
-  p_page_index  integer  DEFAULT 1,
-  p_page_size   integer  DEFAULT 20
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $function$
+    p_page_index integer DEFAULT 1, 
+    p_page_size integer DEFAULT 10, 
+    p_search_text text DEFAULT NULL::text
+)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
 /*
 ================================================
 Copyright     : Early Learning App, 2026
 Created By    : Pratul Dwivedi
-Modified Date : 20-Feb-2026
+Modified Date : 01-Mar-2026
 Description   : Fetch paginated list of guardians with their students.
+                Pass p_page_index = 0 to retrieve all records without pagination.
 SET LOCAL request.jwt.claim.sub = 'c8ae012c-e272-4651-8162-72ca91a85000';
 SELECT edu.fn_get_gurdians();
+SELECT edu.fn_get_gurdians(p_page_index := 0);
 SELECT edu.fn_get_gurdians(p_page_index := 2, p_page_size := 10);
 ==================================================
 */
@@ -23,21 +30,22 @@ DECLARE
     v_offset        int;
 BEGIN
     BEGIN
+        -- ── Get Request Context ───────────────────────────────
         SELECT tenant_id, user_id, caller_id
         INTO v_tenant_id, v_user_id, v_caller_id
         FROM public.fn_get_request_context('edu.fn_get_gurdians');
 
         -- ── Validations ───────────────────────────────────────
 
-        IF p_page_index < 1 THEN
-            RAISE EXCEPTION 'page_index must be >= 1.';
+        IF p_page_index < 0 THEN
+            RAISE EXCEPTION 'page_index must be >= 0 (use 0 to load all records).';
         END IF;
 
-        IF p_page_size < 1 OR p_page_size > 100 THEN
-            RAISE EXCEPTION 'page_size must be between 1 and 100.';
+        IF p_page_size < 1 THEN
+            RAISE EXCEPTION 'page_size must be >= 1.';
         END IF;
 
-        -- Check is_admin from profiles.data
+        -- ── Check Admin ───────────────────────────────────────
         SELECT COALESCE((data->>'is_admin')::boolean, false)
         INTO v_is_admin
         FROM public.profiles
@@ -47,17 +55,22 @@ BEGIN
             RAISE EXCEPTION 'ACCESS_DENIED';
         END IF;
 
-        v_offset := (p_page_index - 1) * p_page_size;
+        v_offset := CASE WHEN p_page_index = 0 THEN 0 ELSE (p_page_index - 1) * p_page_size END;
 
-        -- ── Total count ───────────────────────────────────────
+        -- ── Total Count (With Search Filter) ──────────────────
 
         SELECT COUNT(*)
         INTO v_total_records
         FROM public.profiles p
         WHERE p.tenant_id = v_tenant_id
-          AND p.is_active = true;
+          AND p.is_active = true
+          AND (
+                p_search_text IS NULL
+                OR p.full_name ILIKE '%' || p_search_text || '%'
+                OR p.email     ILIKE '%' || p_search_text || '%'
+              );
 
-        -- ── Paginated result ──────────────────────────────────
+        -- ── Paginated Result ───────────────────────────────────
 
         SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
         INTO v_result
@@ -91,10 +104,17 @@ BEGIN
             FROM public.profiles p
             WHERE p.tenant_id = v_tenant_id
               AND p.is_active = true
+              AND (
+                    p_search_text IS NULL
+                    OR p.full_name ILIKE '%' || p_search_text || '%'
+                    OR p.email     ILIKE '%' || p_search_text || '%'
+                  )
             ORDER BY p.full_name
-            LIMIT  p_page_size
+            LIMIT  CASE WHEN p_page_index = 0 THEN NULL ELSE p_page_size END
             OFFSET v_offset
         ) t;
+
+        -- ── Return Success ─────────────────────────────────────
 
         RETURN public.fn_response_success(
             p_data          := v_result,
@@ -105,6 +125,7 @@ BEGIN
         );
 
     EXCEPTION WHEN OTHERS THEN
+
         IF SQLERRM = 'ACCESS_DENIED' THEN
             RETURN public.fn_response_error(
                 p_function_name := 'edu.fn_get_gurdians',
@@ -124,4 +145,4 @@ BEGIN
         );
     END;
 END;
-$function$;
+$function$

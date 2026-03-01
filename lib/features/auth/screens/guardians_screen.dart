@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../../common/models/screen_args_model.dart';
 import '../../common/providers/student_provider.dart';
 import '../../common/services/navigation_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
+import '../../common/widgets/data_export_download_button.dart';
 import '../models/guardian_model.dart';
 import '../models/theme_colors.dart';
 import '../providers/theme_provider.dart';
@@ -56,11 +58,12 @@ class GuardiansList extends ConsumerStatefulWidget {
 
 class _GuardiansListState extends ConsumerState<GuardiansList> {
   static const int _firstPageIndex = 1;
-  static const int _defaultPageSize = 4;
   static const double _nextPageTriggerOffset = 220;
+  static const Duration _searchDebounceDuration = Duration(milliseconds: 450);
 
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
@@ -68,7 +71,6 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
   String _searchQuery = '';
 
   int _currentPageIndex = 0;
-  int _pageSize = 0;
   int _totalRecords = 0;
 
   final List<Guardian> _guardians = <Guardian>[];
@@ -81,13 +83,25 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(() {
+      final nextQuery = _searchController.text.trim();
       if (!mounted) return;
-      setState(() {
-        _searchQuery = _searchController.text.trim().toLowerCase();
+      setState(() {});
+      if (nextQuery == _searchQuery) return;
+
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(_searchDebounceDuration, () {
+        if (!mounted) return;
+        setState(() {
+          _searchQuery = nextQuery;
+        });
+        _refreshGuardians();
       });
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = _searchController.text.trim();
+      });
       _refreshGuardians();
     });
   }
@@ -102,6 +116,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController
       ..removeListener(_onScroll)
@@ -125,6 +140,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
   }
 
   void _onScroll() {
+    if (kIsWeb) return;
     if (!_scrollController.hasClients || _isLoadingMore || _isInitialLoading) {
       return;
     }
@@ -143,7 +159,6 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
       _isLoadingMore = false;
       _loadError = null;
       _currentPageIndex = 0;
-      _pageSize = _defaultPageSize;
       _totalRecords = 0;
       _guardians.clear();
     });
@@ -173,10 +188,9 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
     });
 
     try {
-      final effectivePageSize = _pageSize > 0 ? _pageSize : _defaultPageSize;
       final params = GuardiansPagingParams(
         pageIndex: pageIndex,
-        pageSize: effectivePageSize,
+        searchText: _searchQuery,
       );
 
       final response = reset
@@ -214,7 +228,6 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
         }
 
         _currentPageIndex = paging?.pageIndex ?? pageIndex;
-        _pageSize = paging?.pageSize ?? effectivePageSize;
         _totalRecords = paging?.totalRecords ?? _guardians.length;
         _isInitialLoading = false;
         _isLoadingMore = false;
@@ -227,6 +240,44 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
         _isLoadingMore = false;
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadGuardianExportRows() async {
+    final response = await ref.read(eduServiceProvider).getGuardians(
+          pageIndex: 0,
+          searchText: _searchQuery,
+        );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    final guardians = response.data
+        .map((item) => Guardian.fromJson(item as Map<String, dynamic>))
+        .toList();
+
+    final rows = <Map<String, dynamic>>[];
+    for (final guardian in guardians) {
+      if (guardian.students.isEmpty) {
+        rows.add({
+          'guardian_name': guardian.fullName,
+          'email': guardian.email,
+          'student_name': '',
+          'grade': '',
+        });
+        continue;
+      }
+
+      for (final student in guardian.students) {
+        rows.add({
+          'guardian_name': guardian.fullName,
+          'email': guardian.email,
+          'student_name': '${student.firstName} ${student.lastName}'.trim(),
+          'grade': student.grade?.toString() ?? '',
+        });
+      }
+    }
+
+    return rows;
   }
 
   Widget _messageCard({
@@ -485,28 +536,15 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
           colors: colors,
           icon: Icons.people_outline,
           title: 'No Guardians Found',
-          subtitle: 'No guardians available for this tenant',
+          subtitle: _searchQuery.isEmpty
+              ? 'No guardians available for this tenant'
+              : 'No guardians match "$_searchQuery"',
         ),
       );
     }
 
-    final filteredGuardians = _guardians.where((guardian) {
-      final fullName = guardian.fullName.toLowerCase();
-      final email = guardian.email.toLowerCase();
-      final studentNames = guardian.students
-          .map(
-            (student) =>
-                '${student.firstName} ${student.lastName}'.toLowerCase().trim(),
-          )
-          .join(' ');
-      return fullName.contains(_searchQuery) ||
-          email.contains(_searchQuery) ||
-          studentNames.contains(_searchQuery);
-    }).toList();
-
     final crossAxisCount = _gridCrossAxisCount(context);
-    final pagingText =
-        'Page: $_currentPageIndex | Size: ${_pageSize > 0 ? _pageSize : '-'} | Total: $_totalRecords';
+    final pagingText = 'Page: $_currentPageIndex | Total: $_totalRecords';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -533,7 +571,7 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                           decoration: InputDecoration(
                             hintText: 'Search guardians...',
                             prefixIcon: const Icon(Icons.search),
-                            suffixIcon: _searchQuery.isNotEmpty
+                            suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
                                     onPressed: () {
@@ -567,6 +605,28 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           if (_isLoadingMore) const SizedBox(width: 6),
+                          DataExportDownloadButton(
+                            loadData: _loadGuardianExportRows,
+                            fileNamePrefix: 'guardians',
+                            columns: const <ExportColumn>[
+                              ExportColumn(
+                                key: 'guardian_name',
+                                header: 'Guardian Name',
+                              ),
+                              ExportColumn(
+                                key: 'email',
+                                header: 'Email',
+                              ),
+                              ExportColumn(
+                                key: 'student_name',
+                                header: 'Student Name',
+                              ),
+                              ExportColumn(
+                                key: 'grade',
+                                header: 'Grade',
+                              ),
+                            ],
+                          ),
                           Expanded(
                             child: Text(
                               pagingText,
@@ -588,47 +648,33 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
               ),
             ),
           ),
-          if (filteredGuardians.isEmpty && _searchQuery.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _messageCard(
-                  iconColor: primaryColor,
-                  colors: colors,
-                  icon: Icons.person_search,
-                  title: 'No Guardians Match',
-                  subtitle: 'Try a different search term',
-                ),
-              ),
-            )
-          else
-            SliverToBoxAdapter(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const spacing = 12.0;
-                  final itemWidth = crossAxisCount == 1
-                      ? constraints.maxWidth
-                      : (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
-                          crossAxisCount;
+          SliverToBoxAdapter(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 12.0;
+                final itemWidth = crossAxisCount == 1
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
+                        crossAxisCount;
 
-                  return Wrap(
-                    spacing: spacing,
-                    runSpacing: spacing,
-                    children: filteredGuardians
-                        .map(
-                          (guardian) => _buildGuardianCard(
-                            context,
-                            guardian,
-                            colors,
-                            primaryColor,
-                            itemWidth,
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-              ),
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: _guardians
+                      .map(
+                        (guardian) => _buildGuardianCard(
+                          context,
+                          guardian,
+                          colors,
+                          primaryColor,
+                          itemWidth,
+                        ),
+                      )
+                      .toList(),
+                );
+              },
             ),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -640,6 +686,16 @@ class _GuardiansListState extends ConsumerState<GuardiansList> {
                       style: const TextStyle(color: Colors.red, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
+                  if (kIsWeb && _hasMorePages) ...[
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: _isLoadingMore ? null : _loadNextPage,
+                      icon: const Icon(Icons.navigate_next),
+                      label: Text(
+                        _isLoadingMore ? 'Loading...' : 'Next',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

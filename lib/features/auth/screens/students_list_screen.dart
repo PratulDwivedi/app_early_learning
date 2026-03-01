@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/app_constants.dart';
@@ -9,6 +9,7 @@ import '../../common/models/screen_args_model.dart';
 import '../../common/providers/student_provider.dart';
 import '../../common/services/navigation_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
+import '../../common/widgets/data_export_download_button.dart';
 import '../models/theme_colors.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
@@ -55,11 +56,12 @@ class StudentsListView extends ConsumerStatefulWidget {
 
 class _StudentsListViewState extends ConsumerState<StudentsListView> {
   static const int _firstPageIndex = 1;
-  static const int _defaultPageSize = 4;
   static const double _nextPageTriggerOffset = 220;
+  static const Duration _searchDebounceDuration = Duration(milliseconds: 450);
 
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   bool _isHandlingJwtExpiry = false;
   bool _isInitialLoading = true;
@@ -68,7 +70,6 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
   String _searchQuery = '';
 
   int _currentPageIndex = 0;
-  int _pageSize = 0;
   int _totalRecords = 0;
 
   final List<Map<String, dynamic>> _students = <Map<String, dynamic>>[];
@@ -81,12 +82,25 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(() {
+      final nextQuery = _searchController.text.trim();
       if (!mounted) return;
-      setState(() {
-        _searchQuery = _searchController.text.trim().toLowerCase();
+      setState(() {});
+      if (nextQuery == _searchQuery) return;
+
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(_searchDebounceDuration, () {
+        if (!mounted) return;
+        setState(() {
+          _searchQuery = nextQuery;
+        });
+        _refreshStudents();
       });
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = _searchController.text.trim();
+      });
       _refreshStudents();
     });
   }
@@ -101,6 +115,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController
       ..removeListener(_onScroll)
@@ -144,15 +159,8 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     return 2;
   }
 
-  double _studentCardAspectRatio(BuildContext context, int crossAxisCount) {
-    if (crossAxisCount == 1) return 3.8;
-    final width = MediaQuery.of(context).size.width;
-    if (width >= 1400) return 3.1;
-    if (width >= 1000) return 3.0;
-    return 3.2;
-  }
-
   void _onScroll() {
+    if (kIsWeb) return;
     if (!_scrollController.hasClients || _isLoadingMore || _isInitialLoading) {
       return;
     }
@@ -171,7 +179,6 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
       _isLoadingMore = false;
       _loadError = null;
       _currentPageIndex = 0;
-      _pageSize = _defaultPageSize;
       _totalRecords = 0;
       _students.clear();
     });
@@ -198,10 +205,9 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     });
 
     try {
-      final effectivePageSize = _pageSize > 0 ? _pageSize : _defaultPageSize;
       final params = StudentsPagingParams(
         pageIndex: pageIndex,
-        pageSize: effectivePageSize,
+        searchText: _searchQuery,
       );
 
       final response = reset
@@ -253,7 +259,6 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
         }
 
         _currentPageIndex = paging?.pageIndex ?? pageIndex;
-        _pageSize = paging?.pageSize ?? effectivePageSize;
         _totalRecords = paging?.totalRecords ?? _students.length;
         _isInitialLoading = false;
         _isLoadingMore = false;
@@ -266,6 +271,26 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
         _isLoadingMore = false;
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadStudentExportRows() async {
+    final response = await ref.read(eduServiceProvider).getStudents(
+          pageIndex: 0,
+          searchText: _searchQuery,
+        );
+
+    if (_isJwtExpiredResponse(response)) {
+      _handleJwtExpired();
+      throw Exception('Session expired. Please login again.');
+    }
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    return response.data
+        .map((student) => Map<String, dynamic>.from(student))
+        .toList();
   }
 
   Widget _messageCard({
@@ -314,7 +339,6 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
     final primaryColor = ref.watch(primaryColorProvider);
     final colors = ref.watch(themeColorsProvider);
     final isAdminUser = ref.watch(authProvider)?.data.isAdmin == true;
-    final normalizedSearchQuery = _searchQuery;
 
     if (_isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -342,23 +366,15 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
           colors: colors,
           icon: Icons.person_search,
           title: 'No students found',
-          subtitle: 'Add your first student to get started',
+          subtitle: _searchQuery.isEmpty
+              ? 'Add your first student to get started'
+              : 'No students match "$_searchQuery"',
         ),
       );
     }
 
-    final filteredStudents = _students.where((student) {
-      final firstName = (student['first_name'] ?? '').toString().toLowerCase();
-      final lastName = (student['last_name'] ?? '').toString().toLowerCase();
-      final email = (student['email'] ?? '').toString().toLowerCase();
-      return firstName.contains(normalizedSearchQuery) ||
-          lastName.contains(normalizedSearchQuery) ||
-          (isAdminUser && email.contains(normalizedSearchQuery));
-    }).toList();
-
     final crossAxisCount = _gridCrossAxisCount(context);
-    final pagingText =
-        'Page: $_currentPageIndex | Size: ${_pageSize > 0 ? _pageSize : '-'} | Total: $_totalRecords';
+    final pagingText = 'Page: $_currentPageIndex | Total: $_totalRecords';
 
     return Padding(
       padding: const EdgeInsets.all(10),
@@ -385,7 +401,7 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                           decoration: InputDecoration(
                             hintText: 'Search Kid...',
                             prefixIcon: const Icon(Icons.search),
-                            suffixIcon: normalizedSearchQuery.isNotEmpty
+                            suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
                                     onPressed: () {
@@ -419,6 +435,21 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           if (_isLoadingMore) const SizedBox(width: 6),
+                          DataExportDownloadButton(
+                            loadData: _loadStudentExportRows,
+                            fileNamePrefix: 'students',
+                            columns: const <ExportColumn>[
+                              ExportColumn(key: 'first_name', header: 'First Name'),
+                              ExportColumn(key: 'last_name', header: 'Last Name'),
+                              ExportColumn(key: 'grade', header: 'Grade'),
+                              ExportColumn(
+                                key: 'school_name',
+                                header: 'School Name',
+                              ),
+                              ExportColumn(key: 'full_name', header: 'Guardian Name'),
+                              ExportColumn(key: 'email', header: 'Guardian Email'),
+                            ],
+                          ),
                           Expanded(
                             child: Text(
                               pagingText,
@@ -440,126 +471,183 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
               ),
             ),
           ),
-          if (filteredStudents.isEmpty && normalizedSearchQuery.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _messageCard(
-                  iconColor: primaryColor,
-                  colors: colors,
-                  icon: Icons.person_search,
-                  title: 'No Kids Match',
-                  subtitle: 'Try a different search term',
-                ),
-              ),
-            )
-          else
-            SliverGrid(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final student = filteredStudents[index];
-                final firstName = student['first_name'] ?? 'Unknown';
-                final lastName = student['last_name'] ?? '';
-                final grade = student['grade'] ?? '-';
-                final email = student['email'] ?? '';
-                final avatarLetter = firstName.toString().isNotEmpty
-                    ? firstName.toString()[0].toUpperCase()
-                    : 'S';
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      final args = ScreenArgsModel(
-                        routeName: AppPageRoute.evaluation,
-                        name: 'Evaluation',
-                        data: student,
-                      );
-                      NavigationService.navigateTo(
-                        args.routeName,
-                        arguments: args,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: primaryColor.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
+          SliverToBoxAdapter(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 12.0;
+                final itemWidth = crossAxisCount == 1
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
+                        crossAxisCount;
+
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: _students.map((student) {
+                    final firstName = student['first_name'] ?? 'Unknown';
+                    final lastName = student['last_name'] ?? '';
+                    final grade = student['grade'] ?? '-';
+                    final email = student['email'] ?? '';
+                    final avatarLetter = firstName.toString().isNotEmpty
+                        ? firstName.toString()[0].toUpperCase()
+                        : 'S';
+
+                    return SizedBox(
+                      width: itemWidth,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            final args = ScreenArgsModel(
+                              routeName: AppPageRoute.evaluation,
+                              name: 'Evaluation',
+                              data: student,
+                            );
+                            NavigationService.navigateTo(
+                              args.routeName,
+                              arguments: args,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  primaryColor.withOpacity(0.8),
-                                  primaryColor,
-                                ],
+                              color: colors.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: primaryColor.withOpacity(0.3),
+                                width: 1,
                               ),
                             ),
-                            child: Center(
-                              child: Text(
-                                avatarLetter,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  '$firstName $lastName',
-                                  style: TextStyle(
-                                    color: colors.textColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        primaryColor.withOpacity(0.8),
+                                        primaryColor,
+                                      ],
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  child: Center(
+                                    child: Text(
+                                      avatarLetter,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                if (isAdminUser)
-                                  Text(
-                                    email.toString(),
-                                    style: TextStyle(
-                                      color: colors.hintColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '$firstName $lastName',
+                                        style: TextStyle(
+                                          color: colors.textColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (isAdminUser)
+                                        Text(
+                                          email.toString(),
+                                          style: TextStyle(
+                                            color: colors.hintColor,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.school_outlined,
+                                            size: 13,
+                                            color: colors.hintColor,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'Grade: $grade',
+                                            style: TextStyle(
+                                              color: colors.hintColor,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                const SizedBox(height: 2),
-                                Row(
+                                ),
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      Icons.school_outlined,
-                                      size: 13,
-                                      color: colors.hintColor,
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: () async {
+                                        final args = ScreenArgsModel(
+                                          routeName: AppPageRoute.addstudent,
+                                          name: 'Edit Kid',
+                                          data: student,
+                                        );
+                                        final updated =
+                                            await NavigationService.navigateTo(
+                                          args.routeName,
+                                          arguments: args,
+                                        );
+                                        if (updated == true) {
+                                          _refreshStudents();
+                                        }
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(6),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          size: 25,
+                                          color: colors.hintColor,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'Grade: $grade',
-                                      style: TextStyle(
-                                        color: colors.hintColor,
-                                        fontSize: 11,
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: () {
+                                        final screenArgsModel = ScreenArgsModel(
+                                          routeName: AppPageRoute.reports,
+                                          name:
+                                              '$firstName $lastName - Report Card',
+                                          data: student,
+                                        );
+                                        NavigationService.navigateTo(
+                                          screenArgsModel.routeName,
+                                          arguments: screenArgsModel,
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(6),
+                                        child: Icon(
+                                          Icons.add_chart_rounded,
+                                          size: 25,
+                                          color: colors.hintColor,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -567,80 +655,14 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                               ],
                             ),
                           ),
-
-                          // ── Direct action buttons ──────────────────────────
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Edit button
-                              InkWell(
-                                borderRadius: BorderRadius.circular(8),
-                                onTap: () async {
-                                  final args = ScreenArgsModel(
-                                    routeName: AppPageRoute.addstudent,
-                                    name: 'Edit Kid',
-                                    data: student,
-                                  );
-                                  final updated =
-                                      await NavigationService.navigateTo(
-                                        args.routeName,
-                                        arguments: args,
-                                      );
-                                  if (updated == true) {
-                                    _refreshStudents();
-                                  }
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Icon(
-                                    Icons.edit_outlined,
-                                    size: 25,
-                                    color: colors.hintColor,
-                                  ),
-                                ),
-                              ),
-                              // Report Card button
-                              InkWell(
-                                borderRadius: BorderRadius.circular(8),
-                                onTap: () {
-                                  final screenArgsModel = ScreenArgsModel(
-                                    routeName: AppPageRoute.reports,
-                                    name: '$firstName $lastName - Report Card',
-                                    data: student,
-                                  );
-                                  NavigationService.navigateTo(
-                                    screenArgsModel.routeName,
-                                    arguments: screenArgsModel,
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Icon(
-                                    Icons.add_chart_rounded,
-                                    size: 25,
-                                    color: colors.hintColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          // ──────────────────────────────────────────────────
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  }).toList(),
                 );
-              }, childCount: filteredStudents.length),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: _studentCardAspectRatio(
-                  context,
-                  crossAxisCount,
-                ),
-              ),
+              },
             ),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -654,6 +676,14 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                       style: const TextStyle(color: Colors.red, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
+                  if (kIsWeb && _hasMorePages) ...[
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: _isLoadingMore ? null : _loadNextPage,
+                      icon: const Icon(Icons.navigate_next),
+                      label: Text(_isLoadingMore ? 'Loading...' : 'Next'),
+                    ),
+                  ],
                 ],
               ),
             ),

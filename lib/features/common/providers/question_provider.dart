@@ -8,11 +8,34 @@ final eduServiceProvider = Provider<EduService>((ref) {
   return EduService.instance;
 });
 
-final getQuestionsProvider = FutureProvider.autoDispose<ResponseMessageModel>((
-  ref,
-) async {
+class QuestionsPagingParams {
+  final int pageIndex;
+  final String searchText;
+
+  const QuestionsPagingParams({
+    this.pageIndex = 1,
+    this.searchText = '',
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is QuestionsPagingParams &&
+        other.pageIndex == pageIndex &&
+        other.searchText == searchText;
+  }
+
+  @override
+  int get hashCode => Object.hash(pageIndex, searchText);
+}
+
+final getQuestionsProvider = FutureProvider.autoDispose
+    .family<ResponseMessageModel, QuestionsPagingParams>((ref, params) async {
   final service = ref.watch(eduServiceProvider);
-  return service.getQuestions();
+  return service.getQuestions(
+    pageIndex: params.pageIndex,
+    searchText: params.searchText,
+  );
 });
 
 final getQuestionTypesProvider =
@@ -46,7 +69,7 @@ final questionByIdProvider =
   questionId,
 ) async {
   final service = ref.watch(eduServiceProvider);
-  final response = await service.getQuestions();
+  final response = await service.getQuestions(pageIndex: 0);
   if (!response.isSuccess) return null;
 
   for (final q in response.data) {
