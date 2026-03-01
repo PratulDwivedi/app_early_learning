@@ -10,6 +10,7 @@ class ApiRoutes {
   static const String savequestions = 'edu.fn_save_questions';
   static const String getQuestions = 'edu.fn_get_questions';
   static const String getQuestionTypes = 'edu.fn_get_question_types';
+  static const String getStudentSessions = 'edu.fn_get_student_sessions';
   static const String startSession = 'edu.fn_start_session';
   static const String submitAnswer = 'edu.fn_submit_answer';
   static const String completeSession = 'edu.fn_complete_session';
@@ -31,6 +32,7 @@ class AppPageRoute {
   static const String addquestion = 'addquestion';
   static const String questions = 'questions';
   static const String evaluation = 'evaluation';
+  static const String studentSessions = 'studentSessions';
   static const String speechSettings = 'speechSettings';
   static const String changePassword = 'changePassword';
   static const String helpline = 'helpline';

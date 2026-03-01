@@ -44,13 +44,19 @@ final getQuestionTypesProvider =
   return service.getQuestionTypes();
 });
 
+final getStudentSessionsProvider = FutureProvider.autoDispose
+    .family<ResponseMessageModel, int>((ref, studentId) async {
+  final service = ref.watch(eduServiceProvider);
+  return service.getStudentSessions(studentId);
+});
+
 class StartSessionArgs {
   final int studentId;
-  final int questionTypeId;
+  final int? sessionId;
 
   const StartSessionArgs({
     required this.studentId,
-    required this.questionTypeId,
+    this.sessionId,
   });
 }
 
@@ -60,7 +66,10 @@ final startSessionProvider =
   args,
 ) async {
   final service = ref.watch(eduServiceProvider);
-  return service.startSession(args.studentId, args.questionTypeId);
+  return service.startSession(
+    args.studentId,
+    sessionId: args.sessionId,
+  );
 });
 
 final questionByIdProvider =

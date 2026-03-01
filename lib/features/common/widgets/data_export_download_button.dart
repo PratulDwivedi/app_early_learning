@@ -79,19 +79,18 @@ class _DataExportDownloadButtonState extends State<DataExportDownloadButton> {
         );
       }
 
-      final bytes = excel.save();
+      final bytes = excel.encode();
       if (bytes == null || bytes.isEmpty) {
         AppSnackbarService.error('Failed to generate XLS file.');
         return;
       }
 
-      final now = DateTime.now();
-      final fileName =
-          '${widget.fileNamePrefix}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.xls';
+      final fileName = '${_safeFileName(widget.fileNamePrefix)}.xlsx';
       final downloaded = await downloadBytes(
         bytes: Uint8List.fromList(bytes),
         fileName: fileName,
-        mimeType: 'application/vnd.ms-excel',
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
 
       if (!mounted) return;
@@ -132,6 +131,12 @@ class _DataExportDownloadButtonState extends State<DataExportDownloadButton> {
     if (value is num || value is bool) return value.toString();
     if (value is DateTime) return value.toIso8601String();
     return value.toString();
+  }
+
+  String _safeFileName(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'data';
+    return trimmed.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
   }
 
   @override

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../config/app_constants.dart';
 import '../../common/models/response_message_model.dart';
 import '../../common/models/screen_args_model.dart';
@@ -500,8 +499,8 @@ class _StudentsListViewState extends ConsumerState<StudentsListView> {
                           borderRadius: BorderRadius.circular(12),
                           onTap: () {
                             final args = ScreenArgsModel(
-                              routeName: AppPageRoute.evaluation,
-                              name: 'Evaluation',
+                              routeName: AppPageRoute.studentSessions,
+                              name: 'Student Sessions',
                               data: student,
                             );
                             NavigationService.navigateTo(

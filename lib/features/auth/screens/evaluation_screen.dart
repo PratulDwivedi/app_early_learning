@@ -36,6 +36,14 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   DateTime? _questionStartTime;
   final Map<int, String> _selectedAnswersByQuestion = {};
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applySessionPayloadFromArgs();
+    });
+  }
+
   int get _studentId {
     final raw = widget.args?.data['id'] ?? widget.args?.data['student_id'];
     if (raw is int) return raw;
@@ -57,6 +65,42 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     return [];
   }
 
+  void _applySessionPayloadFromArgs() {
+    final rawPayload = widget.args?.data['session_payload'];
+    if (rawPayload == null || rawPayload is! Map) return;
+
+    final payload = Map<String, dynamic>.from(rawPayload as Map);
+    final questionsRaw = (payload['questions'] as List?) ?? [];
+    final questions = questionsRaw
+        .map((q) => q is Map ? Map<String, dynamic>.from(q) : null)
+        .whereType<Map<String, dynamic>>()
+        .toList()
+      ..sort(
+        (a, b) => _toInt(a['sort_order']).compareTo(_toInt(b['sort_order'])),
+      );
+
+    if (questions.isEmpty) return;
+
+    setState(() {
+      _sessionId = _toInt(payload['session_id']);
+      _selectedQuestionTypeId = _toInt(
+        payload['question_type_id'] ?? widget.args?.data['question_type_id'],
+      );
+      _sessionQuestions = questions;
+      _selectedAnswersByQuestion.clear();
+      _isStarted = true;
+      _currentQuestionIndex = 0;
+      _selectedOption = null;
+      _recordedAnswerPath = null;
+      _isRecording = false;
+      _questionStartTime = DateTime.now();
+    });
+
+    if (_isSpeakerEnabled && mounted) {
+      _speakCurrentQuestionFromState();
+    }
+  }
+
   Future<void> _startSession(int questionTypeId) async {
     setState(() {
       _isStartingSession = true;
@@ -68,7 +112,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         startSessionProvider(
           StartSessionArgs(
             studentId: _studentId,
-            questionTypeId: questionTypeId,
           ),
         ).future,
       );

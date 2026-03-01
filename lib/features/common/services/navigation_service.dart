@@ -4,6 +4,7 @@ import 'package:app_early_learning/features/auth/screens/students_list_screen.da
 import 'package:app_early_learning/features/auth/screens/question_screen.dart';
 import 'package:app_early_learning/features/auth/screens/question_list_screen.dart';
 import 'package:app_early_learning/features/auth/screens/evaluation_screen.dart';
+import 'package:app_early_learning/features/auth/screens/student_sessions_screen.dart';
 import 'package:app_early_learning/features/auth/screens/speech_settings_screen.dart';
 import 'package:app_early_learning/features/auth/screens/guardians_screen.dart';
 import 'package:app_early_learning/features/auth/screens/student_report_screen.dart';
@@ -85,6 +86,12 @@ class NavigationService {
           return navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => EvaluationScreen(args: args),
+            ),
+          );
+        case AppPageRoute.studentSessions:
+          return navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => StudentSessionsScreen(args: args),
             ),
           );
         case AppPageRoute.speechSettings:

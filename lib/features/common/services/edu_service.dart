@@ -28,7 +28,11 @@ abstract class EduService {
     String searchText = '',
   });
   Future<ResponseMessageModel> getQuestionTypes();
-  Future<ResponseMessageModel> startSession(int studentId, int questionTypeId);
+  Future<ResponseMessageModel> getStudentSessions(int studentId);
+  Future<ResponseMessageModel> startSession(
+    int studentId, {
+    int? sessionId,
+  });
   Future<ResponseMessageModel> submitAnswer(
     int sessionId,
     int questionId,
