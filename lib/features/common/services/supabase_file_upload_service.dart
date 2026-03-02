@@ -9,6 +9,14 @@ import 'supabase_api_helper.dart';
 
 class SupabaseFileUploadService implements FileUploadService {
   @override
+  Future<FileMetadataModel?> uploadFileByPath({
+    required String filePath,
+    Map<String, dynamic>? data,
+  }) async {
+    return uploadFile(file: File(filePath), data: data);
+  }
+
+  @override
   Future<FileMetadataModel?> uploadFile({
     required File file,
     Map<String, dynamic>? data,

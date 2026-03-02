@@ -1,7 +1,9 @@
 import 'dart:developer' as developer;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/models/screen_args_model.dart';
+import '../../common/providers/file_upload_provider.dart';
 import '../../common/providers/question_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
@@ -32,6 +34,7 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
   final _imageUrlController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isUploadingImage = false;
   bool _isLoadingQuestion = false;
   int? _questionTypeId;
 
@@ -143,6 +146,50 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    if (_isUploadingImage) return;
+
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (picked == null || picked.files.isEmpty) return;
+      final selected = picked.files.single;
+      final path = selected.path;
+      if (path == null || path.trim().isEmpty) {
+        AppSnackbarService.error('Unable to read selected file path.');
+        return;
+      }
+
+      setState(() {
+        _isUploadingImage = true;
+      });
+
+      final uploader = ref.read(fileUploadServiceProvider);
+      final metadata = await uploader.uploadFileByPath(filePath: path);
+
+      if (!mounted) return;
+
+      if (metadata?.storedFileName != null &&
+          metadata!.storedFileName!.trim().isNotEmpty) {
+        _imageUrlController.text = metadata.storedFileName!.trim();
+        AppSnackbarService.success('Image uploaded successfully.');
+      } else {
+        AppSnackbarService.error('Image upload failed.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbarService.error('Failed to upload image: $error');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isUploadingImage = false;
+      });
     }
   }
 
@@ -327,7 +374,6 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                           return null;
                         },
                       ),
-                      /*
                       const SizedBox(height: 20),
                       CustomTextFormField(
                         controller: _hintController,
@@ -340,17 +386,44 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                         maxLines: 2,
                       ),
                       const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _imageUrlController,
-                        labelText: 'Image URL',
-                        hintText: 'e.g. letter-a.png',
-                        prefixIcon: Icons.image_outlined,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: CustomTextFormField(
+                              controller: _imageUrlController,
+                              labelText: 'Image URL',
+                              hintText: 'e.g. letter-a.png',
+                              prefixIcon: Icons.image_outlined,
+                              colors: colors,
+                              primaryColor: primaryColor,
+                              keyboardType: TextInputType.text,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: IconButton(
+                              onPressed: (_isLoading || _isUploadingImage)
+                                  ? null
+                                  : _pickAndUploadImage,
+                              tooltip: 'Upload Image',
+                              icon: _isUploadingImage
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.upload_file_rounded,
+                                      color: primaryColor,
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
-
-                      */
                     ],
                   ),
                 ),

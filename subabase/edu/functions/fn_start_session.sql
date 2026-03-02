@@ -150,27 +150,78 @@ BEGIN
         WHERE id = v_session_id;
 
       ELSE
-        -- ── Fresh session ────────────────────────────────────
+
+-- ── Fresh session: proportional questions per type ────
+
+        -- Step 1: Count available questions per type (excluding already correct)
+        -- Step 2: Calculate each type's proportion of total available
+        -- Step 3: Allocate v_no_of_questions proportionally, pick random per type
 
         SELECT ARRAY(
-          SELECT q.id
-          FROM edu.questions q
-          WHERE q.tenant_id = v_tenant_id
-            AND q.is_active = true
-            AND q.id NOT IN (
-              SELECT sr.question_id
-              FROM edu.session_responses sr
-              INNER JOIN edu.sessions ses
-                ON  ses.id        = sr.session_id
-                AND ses.tenant_id = v_tenant_id
-              WHERE ses.student_id = p_student_id
-                AND sr.is_correct  = true
-                AND sr.tenant_id   = v_tenant_id
-            )
-          ORDER BY random()
-          LIMIT v_no_of_questions
-        ) INTO v_question_ids;
+          WITH
 
+          -- Questions already answered correctly by this student
+          correct_qids AS (
+            SELECT sr.question_id
+            FROM edu.session_responses sr
+            INNER JOIN edu.sessions ses
+              ON  ses.id        = sr.session_id
+              AND ses.tenant_id = v_tenant_id
+            WHERE ses.student_id = p_student_id
+              AND sr.is_correct  = true
+              AND sr.tenant_id   = v_tenant_id
+          ),
+
+          -- Available questions per type (excluding correct ones)
+          type_counts AS (
+            SELECT
+              q.question_type_id,
+              COUNT(q.id)::numeric AS type_total
+            FROM edu.questions q
+            WHERE q.tenant_id = v_tenant_id
+              AND q.is_active  = true
+              AND q.id NOT IN (SELECT question_id FROM correct_qids)
+            GROUP BY q.question_type_id
+          ),
+
+          -- Grand total across all types
+          grand_total AS (
+            SELECT SUM(type_total) AS total FROM type_counts
+          ),
+
+          -- Proportional allocation per type
+          -- Use ROUND to get nearest int, floor minimum 1 if type has any questions
+          type_allocation AS (
+            SELECT
+              tc.question_type_id,
+              tc.type_total,
+              GREATEST(1, ROUND((tc.type_total / gt.total) * v_no_of_questions)) AS allocated
+            FROM type_counts tc
+            CROSS JOIN grand_total gt
+          ),
+
+          -- Pick random questions per type up to allocated count
+          picked AS (
+            SELECT
+              q.id,
+              ROW_NUMBER() OVER (
+                PARTITION BY q.question_type_id
+                ORDER BY random()
+              ) AS rn,
+              ta.allocated
+            FROM edu.questions q
+            INNER JOIN type_allocation ta ON ta.question_type_id = q.question_type_id
+            WHERE q.tenant_id = v_tenant_id
+              AND q.is_active  = true
+              AND q.id NOT IN (SELECT question_id FROM correct_qids)
+          )
+
+          SELECT id
+          FROM picked
+          WHERE rn <= allocated
+
+        ) INTO v_question_ids;
+        
         INSERT INTO edu.sessions (
           student_id,
           grade,

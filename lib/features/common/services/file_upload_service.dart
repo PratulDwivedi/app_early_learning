@@ -17,4 +17,9 @@ abstract class FileUploadService {
     required File file,
     Map<String, dynamic>? data,
   });
+
+  Future<FileMetadataModel?> uploadFileByPath({
+    required String filePath,
+    Map<String, dynamic>? data,
+  });
 }
