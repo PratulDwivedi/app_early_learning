@@ -192,12 +192,14 @@ class SupabaseEduService implements EduService {
     int questionId,
     dynamic studentAnswer,
     int timeTakenSec,
+    Map<String, dynamic>? data,
   ) async {
     final payload = {
       'p_session_id': sessionId,
       'p_question_id': questionId,
       'p_student_answer': studentAnswer,
       'p_time_taken_sec': timeTakenSec,
+      'p_data': data,
     };
     final response = await SupabaseApiHelper.post(ApiRoutes.submitAnswer, payload);
     return response;

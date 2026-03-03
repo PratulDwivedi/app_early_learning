@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'package:app_early_learning/config/app_config.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:record/record.dart';
 import '../../common/models/screen_args_model.dart';
+import '../../common/providers/file_upload_provider.dart';
 import '../../common/providers/question_provider.dart';
 import '../../common/providers/speech_settings_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
@@ -45,9 +47,14 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   DateTime? _questionStartTime;
 
   Timer? _sessionTimer;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  StreamSubscription<Uint8List>? _recordStreamSubscription;
+  final List<int> _recordedBytesBuffer = [];
+  AudioEncoder _recordEncoder = AudioEncoder.aacLc;
 
   List<Map<String, dynamic>> _sessionQuestions = [];
   final Map<int, String> _selectedAnswersByQuestion = {};
+  final Map<int, String> _recordedAudioFileByQuestion = {};
 
   @override
   void initState() {
@@ -60,6 +67,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   @override
   void dispose() {
     _sessionTimer?.cancel();
+    _recordStreamSubscription?.cancel();
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -151,6 +160,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   Future<void> _handleTimeout() async {
     if (_isTimingOut) return;
     _isTimingOut = true;
+    await _stopAndUploadQuestionRecording();
 
     final sessionId = _sessionId;
     if (sessionId != null) {
@@ -204,6 +214,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     if (_isSpeakerEnabled && mounted) {
       _speakCurrentQuestionFromState();
     }
+    _startQuestionRecording();
   }
 
   Future<void> _startSession(int questionTypeId) async {
@@ -246,6 +257,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       if (_isSpeakerEnabled && mounted) {
         await _speakCurrentQuestionFromState();
       }
+      await _startQuestionRecording();
     } catch (e) {
       AppSnackbarService.error('Failed to start session: $e');
     } finally {
@@ -265,23 +277,145 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     setState(() {
       _currentQuestionIndex = previousQuestionIndex;
       _selectedOption = _selectedAnswersByQuestion[previousQuestionId];
-      _recordedAnswerPath = null;
+      _recordedAnswerPath = _recordedAudioFileByQuestion[previousQuestionId];
     });
 
     if (_isSpeakerEnabled && mounted) {
       await _speakCurrentQuestionFromState();
     }
+    await _startQuestionRecording();
   }
 
-  void _toggleRecording() {
-    setState(() => _isRecording = !_isRecording);
-    developer.log(
-      'Recording ${_isRecording ? 'started' : 'stopped'}',
-      name: 'EvaluationScreen',
+  RecordConfig _buildRecordConfig() {
+    return const RecordConfig(
+      encoder: AudioEncoder.aacLc,
+      bitRate: 128000,
+      sampleRate: 44100,
     );
-    AppSnackbarService.success(
-      _isRecording ? 'Recording started...' : 'Recording stopped',
-    );
+  }
+
+  Future<void> _startQuestionRecording() async {
+    if (!_isStarted || _isRecording) return;
+    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+      return;
+    }
+
+    try {
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        AppSnackbarService.error('Microphone permission is required for answer recording.');
+        return;
+      }
+
+      _recordedBytesBuffer.clear();
+      _recordStreamSubscription?.cancel();
+
+      final config = _buildRecordConfig();
+      _recordEncoder = config.encoder;
+      final audioStream = await _audioRecorder.startStream(config);
+      _recordStreamSubscription = audioStream.listen(
+        (chunk) => _recordedBytesBuffer.addAll(chunk),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isRecording = true;
+        _recordedAnswerPath = null;
+      });
+    } catch (e) {
+      AppSnackbarService.error('Failed to start recording: $e');
+    }
+  }
+
+  String _audioFileExtension(AudioEncoder encoder) {
+    switch (encoder) {
+      case AudioEncoder.opus:
+        return 'opus';
+      case AudioEncoder.wav:
+        return 'wav';
+      case AudioEncoder.flac:
+        return 'flac';
+      case AudioEncoder.amrNb:
+      case AudioEncoder.amrWb:
+        return '3gp';
+      case AudioEncoder.pcm16bits:
+        return 'pcm';
+      case AudioEncoder.aacEld:
+      case AudioEncoder.aacHe:
+      case AudioEncoder.aacLc:
+        return 'm4a';
+    }
+  }
+
+  Future<String?> _stopAndUploadQuestionRecording() async {
+    if (!_isRecording) return _recordedAnswerPath;
+
+    try {
+      await _audioRecorder.stop();
+      await _recordStreamSubscription?.cancel();
+      _recordStreamSubscription = null;
+    } catch (_) {
+      // ignore and proceed with whatever bytes were captured
+    }
+
+    if (_recordedBytesBuffer.isEmpty) {
+      if (mounted) {
+        setState(() => _isRecording = false);
+      } else {
+        _isRecording = false;
+      }
+      return null;
+    }
+
+    try {
+      final uploader = ref.read(fileUploadServiceProvider);
+      final currentQuestion = _sessionQuestions[_currentQuestionIndex];
+      final questionId = _toInt(currentQuestion['id']);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final ext = _audioFileExtension(_recordEncoder);
+      final metadata = await uploader.uploadFileBytes(
+        fileBytes: Uint8List.fromList(_recordedBytesBuffer),
+        fileName: 'ans_q${questionId}_$now.$ext',
+      );
+
+      final fileName = metadata?.fileName?.trim();
+      if (fileName != null && fileName.isNotEmpty) {
+        _recordedAudioFileByQuestion[questionId] = fileName;
+        if (mounted) {
+          setState(() {
+            _isRecording = false;
+            _recordedAnswerPath = fileName;
+          });
+        } else {
+          _isRecording = false;
+          _recordedAnswerPath = fileName;
+        }
+        return fileName;
+      }
+    } catch (e) {
+      AppSnackbarService.error('Failed to upload answer audio: $e');
+    } finally {
+      _recordedBytesBuffer.clear();
+      if (mounted) {
+        setState(() => _isRecording = false);
+      } else {
+        _isRecording = false;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await _stopAndUploadQuestionRecording();
+      AppSnackbarService.success('Recording stopped');
+      return;
+    }
+    await _startQuestionRecording();
+    if (_isRecording) {
+      AppSnackbarService.success('Recording started...');
+    }
   }
 
   Future<void> _playQuestionAudio(
@@ -375,7 +509,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       final nextQuestion = _sessionQuestions[_currentQuestionIndex];
       final nextQuestionId = _toInt(nextQuestion['id']);
       _selectedOption = _selectedAnswersByQuestion[nextQuestionId];
-      _recordedAnswerPath = null;
+      _recordedAnswerPath = _recordedAudioFileByQuestion[nextQuestionId];
       _questionStartTime = DateTime.now();
       _isSubmittingAnswer = false;
     });
@@ -383,6 +517,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     if (_isSpeakerEnabled && mounted) {
       await _speakCurrentQuestionFromState();
     }
+    await _startQuestionRecording();
   }
 
   Future<void> _submitFinalAnswerAndCompleteSession() async {
@@ -445,6 +580,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final studentAnswer = rawAnswer == null || rawAnswer.isEmpty
         ? null
         : rawAnswer;
+    final audioFileName = await _stopAndUploadQuestionRecording();
     final timeTakenSec = _questionStartTime == null
         ? 1
         : DateTime.now()
@@ -465,6 +601,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         questionId,
         studentAnswer,
         timeTakenSec,
+        {'audio_file': audioFileName},
       );
       if (!submitResponse.isSuccess) {
         AppSnackbarService.error(submitResponse.message);
@@ -574,7 +711,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                       colors: colors,
                       primaryColor: primaryColor,
                       questionText: questionText,
-                      questionImageUrl: questionImageUrl!,
+                      questionImageUrl: questionImageUrl,
                       isSpeakerEnabled: _isSpeakerEnabled,
                       onSpeakerPressed: () async {
                         final nextValue = !_isSpeakerEnabled;

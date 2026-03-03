@@ -43,6 +43,7 @@ abstract class EduService {
     int questionId,
     dynamic studentAnswer,
     int timeTakenSec,
+    Map<String, dynamic>? data,
   );
   Future<ResponseMessageModel> completeSession(int sessionId, String status);
   Future<ResponseMessageModel> getGuardians({
