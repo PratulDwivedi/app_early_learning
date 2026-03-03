@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../config/app_config.dart';
 import '../../models/theme_colors.dart';
 
 class EvaluationQuestionPanel extends StatelessWidget {
@@ -12,6 +13,7 @@ class EvaluationQuestionPanel extends StatelessWidget {
   final ThemeColors colors;
   final Color primaryColor;
   final String questionText;
+  final String questionImageUrl;
   final bool isSpeakerEnabled;
   final VoidCallback onSpeakerPressed;
   final bool isConfirmationType;
@@ -30,6 +32,7 @@ class EvaluationQuestionPanel extends StatelessWidget {
     required this.colors,
     required this.primaryColor,
     required this.questionText,
+    required this.questionImageUrl,
     required this.isSpeakerEnabled,
     required this.onSpeakerPressed,
     required this.isConfirmationType,
@@ -62,6 +65,12 @@ class EvaluationQuestionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final optionCardHeight = _optionCardHeight(options);
     final optionTextMaxLines = optionCardHeight >= 132 ? 3 : 2;
+    final hasImage = questionImageUrl.isNotEmpty;
+    final resolvedImageUrl = hasImage
+        ? (questionImageUrl.startsWith('http')
+            ? questionImageUrl
+            : '${appConfig.storageUrl}/$questionImageUrl')
+        : '';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -110,6 +119,38 @@ class EvaluationQuestionPanel extends StatelessWidget {
               ),
             ],
           ),
+          if (hasImage) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  resolvedImageUrl,
+                  fit: BoxFit.fill,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: colors.inputFillColor,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: colors.hintColor,
+                        size: 30,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: colors.inputFillColor,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (isConfirmationType) ...[
             if (options.isNotEmpty) ...[

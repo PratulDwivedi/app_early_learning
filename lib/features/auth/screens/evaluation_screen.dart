@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:app_early_learning/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/models/screen_args_model.dart';
@@ -71,10 +72,13 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
 
   bool get _isCurrentQuestionConfirmationType {
     if (!_isStarted || _sessionQuestions.isEmpty) return false;
-    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+    if (_currentQuestionIndex < 0 ||
+        _currentQuestionIndex >= _sessionQuestions.length) {
       return false;
     }
-    return _toBool(_sessionQuestions[_currentQuestionIndex]['is_confirmation_type']);
+    return _toBool(
+      _sessionQuestions[_currentQuestionIndex]['is_confirmation_type'],
+    );
   }
 
   int _toInt(dynamic value) {
@@ -102,14 +106,18 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     return [];
   }
 
-  List<Map<String, dynamic>> _extractSortedQuestions(Map<String, dynamic>? sessionData) {
+  List<Map<String, dynamic>> _extractSortedQuestions(
+    Map<String, dynamic>? sessionData,
+  ) {
     final questionsRaw = (sessionData?['questions'] as List?) ?? [];
     return questionsRaw
         .map((q) => q is Map ? Map<String, dynamic>.from(q) : null)
         .whereType<Map<String, dynamic>>()
         .toList()
       ..sort((a, b) {
-        final orderCompare = _toInt(a['sort_order']).compareTo(_toInt(b['sort_order']));
+        final orderCompare = _toInt(
+          a['sort_order'],
+        ).compareTo(_toInt(b['sort_order']));
         if (orderCompare != 0) return orderCompare;
         return _toInt(a['id']).compareTo(_toInt(b['id']));
       });
@@ -159,7 +167,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
 
     if (mounted) {
       await ref.read(speechServiceProvider).stop();
-      AppSnackbarService.error('Session timed out and was marked as abandoned.');
+      AppSnackbarService.error(
+        'Session timed out and was marked as abandoned.',
+      );
       NavigationService.goBack(result: true);
     }
   }
@@ -204,11 +214,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
 
     try {
       final response = await ref.read(
-        startSessionProvider(
-          StartSessionArgs(
-            studentId: _studentId,
-          ),
-        ).future,
+        startSessionProvider(StartSessionArgs(studentId: _studentId)).future,
       );
 
       if (!response.isSuccess) {
@@ -282,7 +288,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     Map<String, dynamic>? question,
     String questionText,
   ) async {
-    final audioPrompt = (question?['name_audio_prompt'] ?? '').toString().trim();
+    final audioPrompt = (question?['name_audio_prompt'] ?? '')
+        .toString()
+        .trim();
     final fallbackText = questionText.trim();
     final textToSpeak = audioPrompt.isNotEmpty ? audioPrompt : fallbackText;
 
@@ -298,7 +306,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
 
   Future<void> _speakCurrentQuestionFromState() async {
     if (!_isStarted || _sessionQuestions.isEmpty) return;
-    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+    if (_currentQuestionIndex < 0 ||
+        _currentQuestionIndex >= _sessionQuestions.length) {
       return;
     }
     final question = _sessionQuestions[_currentQuestionIndex];
@@ -396,7 +405,10 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     }
 
     final service = ref.read(eduServiceProvider);
-    final completeResponse = await service.completeSession(sessionId, 'COMPLETED');
+    final completeResponse = await service.completeSession(
+      sessionId,
+      'COMPLETED',
+    );
     if (completeResponse.isSuccess) {
       _sessionTimer?.cancel();
       AppSnackbarService.success('Evaluation submitted successfully!');
@@ -416,7 +428,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       return false;
     }
 
-    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+    if (_currentQuestionIndex < 0 ||
+        _currentQuestionIndex >= _sessionQuestions.length) {
       AppSnackbarService.error('Question context is invalid.');
       return false;
     }
@@ -429,11 +442,16 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     }
 
     final rawAnswer = _selectedOption?.trim();
-    final studentAnswer =
-        rawAnswer == null || rawAnswer.isEmpty ? null : rawAnswer;
+    final studentAnswer = rawAnswer == null || rawAnswer.isEmpty
+        ? null
+        : rawAnswer;
     final timeTakenSec = _questionStartTime == null
         ? 1
-        : DateTime.now().difference(_questionStartTime!).inSeconds.clamp(1, 36000).toInt();
+        : DateTime.now()
+              .difference(_questionStartTime!)
+              .inSeconds
+              .clamp(1, 36000)
+              .toInt();
 
     developer.log(
       'Submitting answer: sessionId=$sessionId, questionId=$questionId, answer=$studentAnswer, timeTakenSec=$timeTakenSec',
@@ -466,9 +484,14 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final colors = ref.watch(themeColorsProvider);
     final questionTypesAsync = ref.watch(getQuestionTypesProvider);
 
-    final currentQuestion =
-        _isStarted && _sessionQuestions.isNotEmpty ? _sessionQuestions[_currentQuestionIndex] : null;
+    final currentQuestion = _isStarted && _sessionQuestions.isNotEmpty
+        ? _sessionQuestions[_currentQuestionIndex]
+        : null;
     final questionText = (currentQuestion?['name'] ?? '').toString();
+
+    final questionImageUrl =
+        currentQuestion?['image_url']?.toString().trim() ?? '';
+
     final options = _parseOptions(currentQuestion?['options']);
 
     return Scaffold(
@@ -512,7 +535,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                         ],
                       ),
                       child: questionTypesAsync.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (error, stack) => Text(
                           'Failed to load evaluation modes: $error',
                           style: TextStyle(color: colors.textColor),
@@ -525,8 +549,13 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                             );
                           }
 
-                          final modes = List<Map<String, dynamic>>.from(response.data)
-                            ..sort((a, b) => _toInt(a['sort_order']).compareTo(_toInt(b['sort_order'])));
+                          final modes =
+                              List<Map<String, dynamic>>.from(response.data)
+                                ..sort(
+                                  (a, b) => _toInt(
+                                    a['sort_order'],
+                                  ).compareTo(_toInt(b['sort_order'])),
+                                );
 
                           return EvaluationModeSelector(
                             colors: colors,
@@ -545,6 +574,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                       colors: colors,
                       primaryColor: primaryColor,
                       questionText: questionText,
+                      questionImageUrl: questionImageUrl!,
                       isSpeakerEnabled: _isSpeakerEnabled,
                       onSpeakerPressed: () async {
                         final nextValue = !_isSpeakerEnabled;
@@ -578,7 +608,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
               isSubmittingAnswer: _isSubmittingAnswer,
               currentQuestionIndex: _currentQuestionIndex,
               totalQuestions: _sessionQuestions.length,
-              onPrevious: _currentQuestionIndex > 0 ? () => _previousQuestion() : null,
+              onPrevious: _currentQuestionIndex > 0
+                  ? () => _previousQuestion()
+                  : null,
               onNext: _nextQuestion,
               onSubmit: _submitEvaluation,
             ),
