@@ -9,6 +9,7 @@ import '../../common/providers/file_upload_provider.dart';
 import '../../common/providers/question_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
+import '../../common/widgets/audio_record_upload_field.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/custom_dropdown_form_field.dart';
@@ -38,6 +39,7 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
 
   bool _isLoading = false;
   bool _isUploadingImage = false;
+  bool _isUploadingAudio = false;
   bool _isLoadingQuestion = false;
   int? _questionTypeId;
 
@@ -327,6 +329,21 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                         );
                       }
 
+                      Widget buildQuestionAudioPromptField() {
+                        return AudioRecordUploadField(
+                          controller: _nameAudioPromptController,
+                          colors: colors,
+                          primaryColor: primaryColor,
+                          labelText: 'Question Audio Prompt',
+                          hintText: 'Tap mic to record and upload',
+                          enabled: !_isLoading,
+                          onUploadingChanged: (isUploading) {
+                            if (!mounted) return;
+                            setState(() => _isUploadingAudio = isUploading);
+                          },
+                        );
+                      }
+
                       Widget buildResponsiveRow({
                         required Widget left,
                         required Widget right,
@@ -416,15 +433,7 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                                 return null;
                               },
                             ),
-                            right: CustomTextFormField(
-                              controller: _nameAudioPromptController,
-                              labelText: 'Question Audio Prompt',
-                              hintText: 'e.g. which-starts-with-a.mp3',
-                              prefixIcon: Icons.audiotrack_outlined,
-                              colors: colors,
-                              primaryColor: primaryColor,
-                              keyboardType: TextInputType.text,
-                            ),
+                            right: buildQuestionAudioPromptField(),
                           ),
                           const SizedBox(height: 20),
                           buildResponsiveRow(
@@ -504,6 +513,8 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                     child: CustomSecondaryButton(
                       label: 'Cancel',
                       onPressed: (_isLoading || _isLoadingQuestion)
+                          || _isUploadingImage
+                          || _isUploadingAudio
                           ? null
                           : () => NavigationService.goBack(),
                       primaryColor: primaryColor,
@@ -518,6 +529,8 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                           ? 'Saving...'
                           : (_isEditing ? 'Update' : 'Save'),
                       onPressed: (_isLoading || _isLoadingQuestion)
+                          || _isUploadingImage
+                          || _isUploadingAudio
                           ? null
                           : _submitForm,
                       isLoading: _isLoading,

@@ -2,7 +2,9 @@ create or replace function edu.fn_submit_answer (
   p_session_id bigint default null::bigint,
   p_question_id bigint default null::bigint,
   p_student_answer text default null::text,
-  p_time_taken_sec integer default null::integer
+  p_time_taken_sec integer default null::integer,
+  p_data               jsonb   default null::jsonb
+  
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER as $function$
 /*
 ================================================
@@ -136,6 +138,7 @@ BEGIN
         is_correct      = v_is_correct,
         time_taken_sec  = p_time_taken_sec,
         attempt_count   = v_attempt_count + 1,
+        data            = p_data,
         updated_at      = now()
       WHERE id = v_response_id;
 
@@ -150,6 +153,7 @@ BEGIN
         is_correct,
         time_taken_sec,
         attempt_count,
+        data,
         tenant_id,
         created_at
       ) VALUES (
@@ -161,6 +165,7 @@ BEGIN
         v_is_correct,
         p_time_taken_sec,
         1,
+        p_data,
         v_tenant_id,
         now()
       )
