@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import '../../../config/app_config.dart';
 import '../../auth/models/file_models.dart';
 import 'supabase_file_upload_service.dart';
@@ -20,6 +21,12 @@ abstract class FileUploadService {
 
   Future<FileUploadResponse?> uploadFileByPath({
     required String filePath,
+    Map<String, dynamic>? data,
+  });
+
+  Future<FileUploadResponse?> uploadFileBytes({
+    required Uint8List fileBytes,
+    required String fileName,
     Map<String, dynamic>? data,
   });
 }

@@ -1,8 +1,10 @@
 import 'dart:developer' as developer;
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../common/models/screen_args_model.dart';
+import '../../common/services/file_upload_service.dart';
 import '../../common/providers/file_upload_provider.dart';
 import '../../common/providers/question_provider.dart';
 import '../../common/services/app_snackbar_service.dart';
@@ -11,6 +13,7 @@ import '../../common/widgets/common_gradient_header_widget.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/custom_dropdown_form_field.dart';
 import '../../common/widgets/custom_text_form_field.dart';
+import '../models/file_models.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
 
@@ -160,18 +163,15 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
 
       if (picked == null || picked.files.isEmpty) return;
       final selected = picked.files.single;
-      final path = selected.path;
-      if (path == null || path.trim().isEmpty) {
-        AppSnackbarService.error('Unable to read selected file path.');
-        return;
-      }
 
       setState(() {
         _isUploadingImage = true;
       });
 
       final uploader = ref.read(fileUploadServiceProvider);
-      final metadata = await uploader.uploadFileByPath(filePath: path);
+      final metadata = kIsWeb
+          ? await _uploadImageOnWeb(uploader, selected)
+          : await _uploadImageOnNative(uploader, selected);
 
       if (!mounted) return;
 
@@ -190,6 +190,34 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
         _isUploadingImage = false;
       });
     }
+  }
+
+  Future<FileUploadResponse?> _uploadImageOnWeb(
+    FileUploadService uploader,
+    PlatformFile selected,
+  ) async {
+    final bytes = selected.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      AppSnackbarService.error('Unable to read selected file bytes.');
+      return null;
+    }
+
+    return uploader.uploadFileBytes(
+      fileBytes: bytes,
+      fileName: selected.name,
+    );
+  }
+
+  Future<FileUploadResponse?> _uploadImageOnNative(
+    FileUploadService uploader,
+    PlatformFile selected,
+  ) async {
+    final path = selected.path;
+    if (path == null || path.trim().isEmpty) {
+      AppSnackbarService.error('Unable to read selected file path.');
+      return null;
+    }
+    return uploader.uploadFileByPath(filePath: path);
   }
 
   @override
@@ -254,176 +282,213 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      questionTypesAsync.when(
-                        loading: () => const LinearProgressIndicator(),
-                        error: (error, stack) => Text(
-                          'Failed to load question types',
-                          style: TextStyle(color: colors.textColor),
-                        ),
-                        data: (response) {
-                          if (!response.isSuccess || typeIds.isEmpty) {
-                            return Text(
-                              response.message,
-                              style: TextStyle(color: colors.textColor),
-                            );
-                          }
-                          final selected = typeIds.contains(_questionTypeId)
-                              ? _questionTypeId
-                              : null;
-                          return CustomDropdownFormField<int>(
-                            isExpanded: true,
-                            value: selected,
-                            labelText: 'Question Type',
-                            prefixIcon: Icon(
-                              Icons.category_outlined,
-                              color: colors.hintColor,
+                  child: LayoutBuilder(
+                    builder: (context, formConstraints) {
+                      final isWide = formConstraints.maxWidth >= 900;
+
+                      Widget buildImageUrlField() {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: CustomTextFormField(
+                                controller: _imageUrlController,
+                                labelText: 'Image URL',
+                                hintText: 'e.g. letter-a.png',
+                                prefixIcon: Icons.image_outlined,
+                                colors: colors,
+                                primaryColor: primaryColor,
+                                keyboardType: TextInputType.text,
+                              ),
                             ),
-                            fillColor: colors.inputFillColor,
-                            hintColor: colors.hintColor,
-                            primaryColor: primaryColor,
-                            items: typeIds,
-                            itemLabel: (id) {
-                              final item = questionTypes.firstWhere(
-                                (q) => _tryParseInt(q['id']) == id,
-                                orElse: () => <String, dynamic>{},
-                              );
-                              return (item['name'] ?? '').toString();
-                            },
-                            onChanged: (value) {
-                              setState(() => _questionTypeId = value);
-                            },
-                            validator: (value) {
-                              if (value == null) return 'Required';
-                              return null;
-                            },
+                            const SizedBox(width: 10),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: IconButton(
+                                onPressed: (_isLoading || _isUploadingImage)
+                                    ? null
+                                    : _pickAndUploadImage,
+                                tooltip: 'Upload Image',
+                                icon: _isUploadingImage
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.upload_file_rounded,
+                                        color: primaryColor,
+                                      ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      Widget buildResponsiveRow({
+                        required Widget left,
+                        required Widget right,
+                      }) {
+                        if (!isWide) {
+                          return Column(
+                            children: [
+                              left,
+                              const SizedBox(height: 20),
+                              right,
+                            ],
                           );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _nameController,
-                        labelText: 'Question',
-                        hintText: 'Enter question',
-                        prefixIcon: Icons.help_outline,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                        maxLines: 3,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Question is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _nameAudioPromptController,
-                        labelText: 'Question Audio Prompt',
-                        hintText: 'e.g. which-starts-with-a.mp3',
-                        prefixIcon: Icons.audiotrack_outlined,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _optionsController,
-                        labelText: 'Options',
-                        hintText: 'e.g. Apple,Ant,Ball,Cat',
-                        prefixIcon: Icons.list,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                        maxLines: 2,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Options are required';
-                          }
-                          return null;
-                        },
-                      ),
-                      /*
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _optionsAudioPromptController,
-                        labelText: 'Options Audio Prompt',
-                        hintText: 'e.g. apple-ant-ball-cat.mp3',
-                        prefixIcon: Icons.multitrack_audio_outlined,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                      ),
-                      */
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _correctAnswerController,
-                        labelText: 'Correct Answer',
-                        hintText: 'e.g. Apple',
-                        prefixIcon: Icons.check_circle_outline,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Correct answer is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _hintController,
-                        labelText: 'Hint',
-                        hintText: 'Optional hint',
-                        prefixIcon: Icons.lightbulb_outline,
-                        colors: colors,
-                        primaryColor: primaryColor,
-                        keyboardType: TextInputType.text,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        }
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: left),
+                            const SizedBox(width: 16),
+                            Expanded(child: right),
+                          ],
+                        );
+                      }
+
+                      return Column(
                         children: [
-                          Expanded(
-                            child: CustomTextFormField(
-                              controller: _imageUrlController,
-                              labelText: 'Image URL',
-                              hintText: 'e.g. letter-a.png',
-                              prefixIcon: Icons.image_outlined,
+                          questionTypesAsync.when(
+                            loading: () => const LinearProgressIndicator(),
+                            error: (error, stack) => Text(
+                              'Failed to load question types',
+                              style: TextStyle(color: colors.textColor),
+                            ),
+                            data: (response) {
+                              if (!response.isSuccess || typeIds.isEmpty) {
+                                return Text(
+                                  response.message,
+                                  style: TextStyle(color: colors.textColor),
+                                );
+                              }
+                              final selected = typeIds.contains(_questionTypeId)
+                                  ? _questionTypeId
+                                  : null;
+                              return CustomDropdownFormField<int>(
+                                isExpanded: true,
+                                value: selected,
+                                labelText: 'Question Type',
+                                prefixIcon: Icon(
+                                  Icons.category_outlined,
+                                  color: colors.hintColor,
+                                ),
+                                fillColor: colors.inputFillColor,
+                                hintColor: colors.hintColor,
+                                primaryColor: primaryColor,
+                                items: typeIds,
+                                itemLabel: (id) {
+                                  final item = questionTypes.firstWhere(
+                                    (q) => _tryParseInt(q['id']) == id,
+                                    orElse: () => <String, dynamic>{},
+                                  );
+                                  return (item['name'] ?? '').toString();
+                                },
+                                onChanged: (value) {
+                                  setState(() => _questionTypeId = value);
+                                },
+                                validator: (value) {
+                                  if (value == null) return 'Required';
+                                  return null;
+                                },
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          buildResponsiveRow(
+                            left: CustomTextFormField(
+                              controller: _nameController,
+                              labelText: 'Question',
+                              hintText: 'Enter question',
+                              prefixIcon: Icons.help_outline,
+                              colors: colors,
+                              primaryColor: primaryColor,
+                              keyboardType: TextInputType.text,
+                              maxLines: 3,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Question is required';
+                                }
+                                return null;
+                              },
+                            ),
+                            right: CustomTextFormField(
+                              controller: _nameAudioPromptController,
+                              labelText: 'Question Audio Prompt',
+                              hintText: 'e.g. which-starts-with-a.mp3',
+                              prefixIcon: Icons.audiotrack_outlined,
                               colors: colors,
                               primaryColor: primaryColor,
                               keyboardType: TextInputType.text,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: IconButton(
-                              onPressed: (_isLoading || _isUploadingImage)
-                                  ? null
-                                  : _pickAndUploadImage,
-                              tooltip: 'Upload Image',
-                              icon: _isUploadingImage
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.upload_file_rounded,
-                                      color: primaryColor,
-                                    ),
+                          const SizedBox(height: 20),
+                          buildResponsiveRow(
+                            left: CustomTextFormField(
+                              controller: _optionsController,
+                              labelText: 'Options',
+                              hintText: 'e.g. Apple,Ant,Ball,Cat',
+                              prefixIcon: Icons.list,
+                              colors: colors,
+                              primaryColor: primaryColor,
+                              keyboardType: TextInputType.text,
+                              maxLines: 2,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Options are required';
+                                }
+                                return null;
+                              },
+                            ),
+                            right: CustomTextFormField(
+                              controller: _correctAnswerController,
+                              labelText: 'Correct Answer',
+                              hintText: 'e.g. Apple',
+                              prefixIcon: Icons.check_circle_outline,
+                              colors: colors,
+                              primaryColor: primaryColor,
+                              keyboardType: TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Correct answer is required';
+                                }
+                                return null;
+                              },
                             ),
                           ),
+                          /*
+                          const SizedBox(height: 20),
+                          CustomTextFormField(
+                            controller: _optionsAudioPromptController,
+                            labelText: 'Options Audio Prompt',
+                            hintText: 'e.g. apple-ant-ball-cat.mp3',
+                            prefixIcon: Icons.multitrack_audio_outlined,
+                            colors: colors,
+                            primaryColor: primaryColor,
+                            keyboardType: TextInputType.text,
+                          ),
+                          */
+                          const SizedBox(height: 20),
+                          buildResponsiveRow(
+                            left: CustomTextFormField(
+                              controller: _hintController,
+                              labelText: 'Hint',
+                              hintText: 'Optional hint',
+                              prefixIcon: Icons.lightbulb_outline,
+                              colors: colors,
+                              primaryColor: primaryColor,
+                              keyboardType: TextInputType.text,
+                              maxLines: 2,
+                            ),
+                            right: buildImageUrlField(),
+                          ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),

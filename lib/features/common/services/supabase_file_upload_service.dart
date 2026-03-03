@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
@@ -20,12 +21,26 @@ class SupabaseFileUploadService implements FileUploadService {
     required File file,
     Map<String, dynamic>? data,
   }) async {
+    final bytes = await file.readAsBytes();
+    return uploadFileBytes(
+      fileBytes: bytes,
+      fileName: file.path.split('/').last,
+      data: data,
+    );
+  }
+
+  @override
+  Future<FileUploadResponse?> uploadFileBytes({
+    required Uint8List fileBytes,
+    required String fileName,
+    Map<String, dynamic>? data,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final accessToken = prefs.getString('access_token') ?? "";
 
       // File size validation
-      final fileSizeBytes = await file.length();
+      final fileSizeBytes = fileBytes.length;
       final fileSizeMb = fileSizeBytes / (1024 * 1024);
 
       if (fileSizeMb > 5) {
@@ -41,12 +56,17 @@ class SupabaseFileUploadService implements FileUploadService {
       // ✅ Required headers (same as Postman)
       request.headers.addAll({
         'apikey': appConfig.localKey,
-        'Authorization': 'Bearer $accessToken',
-        'Content-Profile': 'edu',
+        'Authorization': 'Bearer $accessToken'
       });
 
       // Add file
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+        ),
+      );
 
       // Send request
       final streamedResponse = await request.send();
@@ -61,7 +81,7 @@ class SupabaseFileUploadService implements FileUploadService {
 
       return FileUploadResponse.fromJson(jsonData);
     } catch (e) {
-      print("Upload error: $e");
+      print('Upload error: $e');
       return null;
     }
   }
