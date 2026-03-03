@@ -192,6 +192,8 @@ class EvaluationQuestionPanel extends StatelessWidget {
               onConfirmCorrect: onConfirmCorrect,
               onConfirmIncorrect: onConfirmIncorrect,
             ),
+            const SizedBox(height: 16),
+            _buildRecordingCard(),
           ] else ...[
             LayoutBuilder(
               builder: (context, constraints) {
@@ -265,67 +267,67 @@ class EvaluationQuestionPanel extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isRecording
-                    ? Colors.red.withOpacity(0.1)
-                    : colors.inputFillColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isRecording ? Colors.red : colors.hintColor.withOpacity(0.3),
-                  width: isRecording ? 2 : 1,
+            _buildRecordingCard(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isRecording ? Colors.red.withOpacity(0.1) : colors.inputFillColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isRecording ? Colors.red : colors.hintColor.withOpacity(0.3),
+          width: isRecording ? 2 : 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Record Your Answer',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: colors.textColor,
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Record Your Answer',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: colors.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        isRecording
-                            ? 'Recording in progress...'
-                            : recordedAnswerPath != null
-                                ? 'Answer recorded'
-                                : 'No recording yet',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colors.hintColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isRecording
-                          ? Colors.red
-                          : primaryColor.withOpacity(0.2),
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        isRecording ? Icons.stop : Icons.mic,
-                        color: isRecording ? Colors.white : primaryColor,
-                        size: 28,
-                      ),
-                      onPressed: onToggleRecording,
-                      tooltip: isRecording ? 'Stop recording' : 'Start recording',
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 4),
+              Text(
+                isRecording
+                    ? 'Recording in progress...'
+                    : recordedAnswerPath != null
+                        ? 'Answer recorded'
+                        : 'No recording yet',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.hintColor,
+                ),
               ),
+            ],
+          ),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isRecording ? Colors.red : primaryColor.withOpacity(0.2),
             ),
-          ],
+            child: IconButton(
+              icon: Icon(
+                isRecording ? Icons.stop : Icons.mic,
+                color: isRecording ? Colors.white : primaryColor,
+                size: 28,
+              ),
+              onPressed: onToggleRecording,
+              tooltip: isRecording ? 'Stop recording' : 'Start recording',
+            ),
+          ),
         ],
       ),
     );
