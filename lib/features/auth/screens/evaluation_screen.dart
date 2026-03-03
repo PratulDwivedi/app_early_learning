@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
@@ -18,6 +19,8 @@ import '../widgets/evaluation/evaluation_bottom_actions.dart';
 import '../widgets/evaluation/evaluation_mode_selector.dart';
 import '../widgets/evaluation/evaluation_progress_header.dart';
 import '../widgets/evaluation/evaluation_question_panel.dart';
+import '../../../utils/blob_loader_stub.dart'
+    if (dart.library.html) '../../../utils/blob_loader_web.dart';
 
 class EvaluationScreen extends ConsumerStatefulWidget {
   final ScreenArgsModel? args;
@@ -51,6 +54,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   StreamSubscription<Uint8List>? _recordStreamSubscription;
   final List<int> _recordedBytesBuffer = [];
   AudioEncoder _recordEncoder = AudioEncoder.aacLc;
+  bool _recordingWithStream = true;
+  String? _recordedOutputPath;
 
   List<Map<String, dynamic>> _sessionQuestions = [];
   final Map<int, String> _selectedAnswersByQuestion = {};
@@ -287,6 +292,14 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   }
 
   RecordConfig _buildRecordConfig() {
+    if (kIsWeb) {
+      return const RecordConfig(
+        encoder: AudioEncoder.opus,
+        bitRate: 128000,
+        sampleRate: 48000,
+      );
+    }
+
     return const RecordConfig(
       encoder: AudioEncoder.aacLc,
       bitRate: 128000,
@@ -309,13 +322,20 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
 
       _recordedBytesBuffer.clear();
       _recordStreamSubscription?.cancel();
+      _recordedOutputPath = null;
 
       final config = _buildRecordConfig();
       _recordEncoder = config.encoder;
-      final audioStream = await _audioRecorder.startStream(config);
-      _recordStreamSubscription = audioStream.listen(
-        (chunk) => _recordedBytesBuffer.addAll(chunk),
-      );
+      try {
+        final audioStream = await _audioRecorder.startStream(config);
+        _recordingWithStream = true;
+        _recordStreamSubscription = audioStream.listen(
+          (chunk) => _recordedBytesBuffer.addAll(chunk),
+        );
+      } catch (_) {
+        _recordingWithStream = false;
+        await _audioRecorder.start(config, path: '');
+      }
 
       if (!mounted) return;
       setState(() {
@@ -351,14 +371,19 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     if (!_isRecording) return _recordedAnswerPath;
 
     try {
-      await _audioRecorder.stop();
-      await _recordStreamSubscription?.cancel();
-      _recordStreamSubscription = null;
+      final stoppedPath = await _audioRecorder.stop();
+      _recordedOutputPath = stoppedPath;
+      if (_recordingWithStream) {
+        await _recordStreamSubscription?.cancel();
+        _recordStreamSubscription = null;
+      }
     } catch (_) {
       // ignore and proceed with whatever bytes were captured
     }
 
-    if (_recordedBytesBuffer.isEmpty) {
+    final hasStreamBytes = _recordedBytesBuffer.isNotEmpty;
+    final hasOutputPath = _recordedOutputPath != null && _recordedOutputPath!.isNotEmpty;
+    if (!hasStreamBytes && !hasOutputPath) {
       if (mounted) {
         setState(() => _isRecording = false);
       } else {
@@ -373,10 +398,18 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       final questionId = _toInt(currentQuestion['id']);
       final now = DateTime.now().millisecondsSinceEpoch;
       final ext = _audioFileExtension(_recordEncoder);
-      final metadata = await uploader.uploadFileBytes(
-        fileBytes: Uint8List.fromList(_recordedBytesBuffer),
-        fileName: 'ans_q${questionId}_$now.$ext',
-      );
+      final metadata = hasStreamBytes
+          ? await uploader.uploadFileBytes(
+              fileBytes: Uint8List.fromList(_recordedBytesBuffer),
+              fileName: 'ans_q${questionId}_$now.$ext',
+            )
+          : await _uploadStoppedPathAudio(
+              uploader: uploader,
+              outputPath: _recordedOutputPath!,
+              questionId: questionId,
+              timestamp: now,
+              extension: ext,
+            );
 
       final fileName = metadata?.fileName?.trim();
       if (fileName != null && fileName.isNotEmpty) {
@@ -396,6 +429,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       AppSnackbarService.error('Failed to upload answer audio: $e');
     } finally {
       _recordedBytesBuffer.clear();
+      _recordedOutputPath = null;
       if (mounted) {
         setState(() => _isRecording = false);
       } else {
@@ -404,6 +438,24 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     }
 
     return null;
+  }
+
+  Future<dynamic> _uploadStoppedPathAudio({
+    required dynamic uploader,
+    required String outputPath,
+    required int questionId,
+    required int timestamp,
+    required String extension,
+  }) async {
+    if (kIsWeb && outputPath.startsWith('blob:')) {
+      final bytes = await loadBlobBytes(outputPath);
+      if (bytes == null || bytes.isEmpty) return null;
+      return uploader.uploadFileBytes(
+        fileBytes: bytes,
+        fileName: 'ans_q${questionId}_$timestamp.$extension',
+      );
+    }
+    return uploader.uploadFileByPath(filePath: outputPath);
   }
 
   Future<void> _toggleRecording() async {

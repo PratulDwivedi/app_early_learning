@@ -121,34 +121,43 @@ class EvaluationQuestionPanel extends StatelessWidget {
           ),
           if (hasImage) ...[
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  resolvedImageUrl,
-                  fit: BoxFit.fill,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: colors.inputFillColor,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: colors.hintColor,
-                        size: 30,
-                      ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: colors.inputFillColor,
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
-                    );
-                  },
-                ),
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final imageHeight = (constraints.maxWidth * 0.42).clamp(
+                  160.0,
+                  280.0,
+                );
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: imageHeight,
+                    child: Image.network(
+                      resolvedImageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: colors.inputFillColor,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: colors.hintColor,
+                            size: 30,
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: colors.inputFillColor,
+                          alignment: Alignment.center,
+                          child: const CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
           ],
           const SizedBox(height: 12),
