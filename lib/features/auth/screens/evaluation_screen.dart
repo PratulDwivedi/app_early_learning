@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +9,12 @@ import '../../common/services/app_snackbar_service.dart';
 import '../../common/services/navigation_service.dart';
 import '../../common/services/speech_service.dart';
 import '../../common/widgets/common_gradient_header_widget.dart';
-import '../../common/widgets/custom_button.dart';
 import '../providers/auth_service_provider.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/evaluation/evaluation_bottom_actions.dart';
+import '../widgets/evaluation/evaluation_mode_selector.dart';
+import '../widgets/evaluation/evaluation_progress_header.dart';
+import '../widgets/evaluation/evaluation_question_panel.dart';
 
 class EvaluationScreen extends ConsumerStatefulWidget {
   final ScreenArgsModel? args;
@@ -22,25 +26,26 @@ class EvaluationScreen extends ConsumerStatefulWidget {
 }
 
 class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
-  static const List<Color> optionColors = [
-    Colors.blue,
-    Colors.purple,
-    Colors.teal,
-    Colors.indigo,
-  ];
-
-  int? _selectedQuestionTypeId;
   bool _isStarted = false;
   bool _isStartingSession = false;
   bool _isSpeakerEnabled = true;
+  bool _isSubmittingAnswer = false;
+  bool _isRecording = false;
+  bool _isTimingOut = false;
+
+  int? _selectedQuestionTypeId;
+  int? _sessionId;
   int _currentQuestionIndex = 0;
+  int _totalDurationMinutes = 0;
+  int _remainingSeconds = 0;
+
   String? _recordedAnswerPath;
   String? _selectedOption;
-  bool _isRecording = false;
-  bool _isSubmittingAnswer = false;
-  int? _sessionId;
-  List<Map<String, dynamic>> _sessionQuestions = [];
   DateTime? _questionStartTime;
+
+  Timer? _sessionTimer;
+
+  List<Map<String, dynamic>> _sessionQuestions = [];
   final Map<int, String> _selectedAnswersByQuestion = {};
 
   @override
@@ -51,11 +56,36 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _sessionTimer?.cancel();
+    super.dispose();
+  }
+
   int get _studentId {
     final raw = widget.args?.data['id'] ?? widget.args?.data['student_id'];
     if (raw is int) return raw;
     final parsed = int.tryParse(raw?.toString() ?? '');
     return parsed ?? 1;
+  }
+
+  bool get _isCurrentQuestionConfirmationType {
+    if (!_isStarted || _sessionQuestions.isEmpty) return false;
+    if (_currentQuestionIndex < 0 || _currentQuestionIndex >= _sessionQuestions.length) {
+      return false;
+    }
+    return _toBool(_sessionQuestions[_currentQuestionIndex]['is_confirmation_type']);
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    return value?.toString().toLowerCase() == 'true';
   }
 
   List<String> _parseOptions(dynamic rawOptions) {
@@ -72,21 +102,77 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     return [];
   }
 
+  List<Map<String, dynamic>> _extractSortedQuestions(Map<String, dynamic>? sessionData) {
+    final questionsRaw = (sessionData?['questions'] as List?) ?? [];
+    return questionsRaw
+        .map((q) => q is Map ? Map<String, dynamic>.from(q) : null)
+        .whereType<Map<String, dynamic>>()
+        .toList()
+      ..sort((a, b) {
+        final orderCompare = _toInt(a['sort_order']).compareTo(_toInt(b['sort_order']));
+        if (orderCompare != 0) return orderCompare;
+        return _toInt(a['id']).compareTo(_toInt(b['id']));
+      });
+  }
+
+  void _startSessionTimer(int durationMinutes) {
+    _sessionTimer?.cancel();
+    final safeMinutes = durationMinutes > 0 ? durationMinutes : 30;
+    setState(() {
+      _totalDurationMinutes = safeMinutes;
+      _remainingSeconds = safeMinutes * 60;
+    });
+
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_remainingSeconds <= 1) {
+        timer.cancel();
+        setState(() => _remainingSeconds = 0);
+        await _handleTimeout();
+        return;
+      }
+
+      setState(() => _remainingSeconds = _remainingSeconds - 1);
+    });
+  }
+
+  Future<void> _handleTimeout() async {
+    if (_isTimingOut) return;
+    _isTimingOut = true;
+
+    final sessionId = _sessionId;
+    if (sessionId != null) {
+      try {
+        final service = ref.read(eduServiceProvider);
+        final response = await service.completeSession(sessionId, 'ABANDONED');
+        if (!response.isSuccess) {
+          AppSnackbarService.error(response.message);
+        }
+      } catch (e) {
+        AppSnackbarService.error('Failed to close timed-out session: $e');
+      }
+    }
+
+    if (mounted) {
+      await ref.read(speechServiceProvider).stop();
+      AppSnackbarService.error('Session timed out and was marked as abandoned.');
+      NavigationService.goBack(result: true);
+    }
+  }
+
   void _applySessionPayloadFromArgs() {
     final rawPayload = widget.args?.data['session_payload'];
     if (rawPayload == null || rawPayload is! Map) return;
 
-    final payload = Map<String, dynamic>.from(rawPayload as Map);
-    final questionsRaw = (payload['questions'] as List?) ?? [];
-    final questions = questionsRaw
-        .map((q) => q is Map ? Map<String, dynamic>.from(q) : null)
-        .whereType<Map<String, dynamic>>()
-        .toList()
-      ..sort(
-        (a, b) => _toInt(a['sort_order']).compareTo(_toInt(b['sort_order'])),
-      );
-
+    final payload = Map<String, dynamic>.from(rawPayload);
+    final questions = _extractSortedQuestions(payload);
     if (questions.isEmpty) return;
+
+    final totalDurationMinutes = _toInt(payload['total_duration_minutes']);
 
     setState(() {
       _sessionId = _toInt(payload['session_id']);
@@ -102,6 +188,8 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       _isRecording = false;
       _questionStartTime = DateTime.now();
     });
+
+    _startSessionTimer(totalDurationMinutes);
 
     if (_isSpeakerEnabled && mounted) {
       _speakCurrentQuestionFromState();
@@ -129,13 +217,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       }
 
       final sessionData = response.firstOrNull;
-      final questionsRaw = (sessionData?['questions'] as List?) ?? [];
-      final questions = questionsRaw
-          .map((q) => q is Map ? Map<String, dynamic>.from(q) : null)
-          .whereType<Map<String, dynamic>>()
-          .toList()
-        ..sort((a, b) => _toInt(a['sort_order']).compareTo(_toInt(b['sort_order'])));
-
+      final questions = _extractSortedQuestions(sessionData);
       if (questions.isEmpty) {
         AppSnackbarService.error('No questions available for selected type.');
         return;
@@ -152,6 +234,9 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         _isRecording = false;
         _questionStartTime = DateTime.now();
       });
+
+      _startSessionTimer(_toInt(sessionData?['total_duration_minutes']));
+
       if (_isSpeakerEnabled && mounted) {
         await _speakCurrentQuestionFromState();
       }
@@ -164,31 +249,21 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     }
   }
 
-  int _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
-  }
-
-  Future<void> _nextQuestion() async {
-    if (_currentQuestionIndex < _sessionQuestions.length - 1) {
-      await _submitCurrentAnswerAndProceed();
-    }
-  }
-
   Future<void> _previousQuestion() async {
-    if (_currentQuestionIndex > 0) {
-      final previousQuestionIndex = _currentQuestionIndex - 1;
-      final previousQuestion = _sessionQuestions[previousQuestionIndex];
-      final previousQuestionId = _toInt(previousQuestion['id']);
-      setState(() {
-        _currentQuestionIndex = previousQuestionIndex;
-        _selectedOption = _selectedAnswersByQuestion[previousQuestionId];
-        _recordedAnswerPath = null;
-      });
-      if (_isSpeakerEnabled && mounted) {
-        await _speakCurrentQuestionFromState();
-      }
+    if (_currentQuestionIndex <= 0) return;
+
+    final previousQuestionIndex = _currentQuestionIndex - 1;
+    final previousQuestion = _sessionQuestions[previousQuestionIndex];
+    final previousQuestionId = _toInt(previousQuestion['id']);
+
+    setState(() {
+      _currentQuestionIndex = previousQuestionIndex;
+      _selectedOption = _selectedAnswersByQuestion[previousQuestionId];
+      _recordedAnswerPath = null;
+    });
+
+    if (_isSpeakerEnabled && mounted) {
+      await _speakCurrentQuestionFromState();
     }
   }
 
@@ -207,9 +282,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     Map<String, dynamic>? question,
     String questionText,
   ) async {
-    final audioPrompt = (question?['name_audio_prompt'] ?? '')
-        .toString()
-        .trim();
+    final audioPrompt = (question?['name_audio_prompt'] ?? '').toString().trim();
     final fallbackText = questionText.trim();
     final textToSpeak = audioPrompt.isNotEmpty ? audioPrompt : fallbackText;
 
@@ -233,15 +306,56 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     await _playQuestionAudio(question, questionText);
   }
 
+  Future<void> _nextQuestion() async {
+    if (_currentQuestionIndex < _sessionQuestions.length - 1) {
+      await _submitCurrentAnswerAndProceed();
+    }
+  }
+
   Future<void> _submitEvaluation() async {
     await _submitFinalAnswerAndCompleteSession();
+  }
+
+  void _selectOptionForCurrentQuestion(String selectedValue) {
+    final currentQuestion = _sessionQuestions[_currentQuestionIndex];
+    final questionId = _toInt(currentQuestion['id']);
+
+    setState(() {
+      _selectedOption = selectedValue;
+      if (questionId > 0) {
+        _selectedAnswersByQuestion[questionId] = selectedValue;
+      }
+    });
+  }
+
+  Future<void> _onConfirmAnswer(bool isCorrect) async {
+    final selectedValue = isCorrect ? 'Correct' : 'Incorrect';
+    _selectOptionForCurrentQuestion(selectedValue);
+
+    if (_currentQuestionIndex < _sessionQuestions.length - 1) {
+      await _submitCurrentAnswerAndProceed();
+    } else {
+      await _submitFinalAnswerAndCompleteSession();
+    }
+  }
+
+  Future<void> _onMcqOptionSelected(String selectedValue) async {
+    _selectOptionForCurrentQuestion(selectedValue);
+
+    if (_currentQuestionIndex < _sessionQuestions.length - 1) {
+      await _submitCurrentAnswerAndProceed();
+    } else {
+      await _submitFinalAnswerAndCompleteSession();
+    }
   }
 
   Future<void> _submitCurrentAnswerAndProceed() async {
     if (_isSubmittingAnswer) return;
     setState(() => _isSubmittingAnswer = true);
+
     final submitted = await _submitCurrentAnswer();
     if (!mounted) return;
+
     if (!submitted) {
       setState(() => _isSubmittingAnswer = false);
       return;
@@ -256,6 +370,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       _questionStartTime = DateTime.now();
       _isSubmittingAnswer = false;
     });
+
     if (_isSpeakerEnabled && mounted) {
       await _speakCurrentQuestionFromState();
     }
@@ -264,8 +379,10 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   Future<void> _submitFinalAnswerAndCompleteSession() async {
     if (_isSubmittingAnswer) return;
     setState(() => _isSubmittingAnswer = true);
+
     final submitted = await _submitCurrentAnswer();
     if (!mounted) return;
+
     if (!submitted) {
       setState(() => _isSubmittingAnswer = false);
       return;
@@ -281,6 +398,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     final service = ref.read(eduServiceProvider);
     final completeResponse = await service.completeSession(sessionId, 'COMPLETED');
     if (completeResponse.isSuccess) {
+      _sessionTimer?.cancel();
       AppSnackbarService.success('Evaluation submitted successfully!');
       NavigationService.goBack(result: true);
     } else {
@@ -292,11 +410,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
   }
 
   Future<bool> _submitCurrentAnswer() async {
-    if (_selectedOption == null || _selectedOption!.trim().isEmpty) {
-      AppSnackbarService.error('Please select an answer first.');
-      return false;
-    }
-
     final sessionId = _sessionId;
     if (sessionId == null) {
       AppSnackbarService.error('Session ID missing. Please restart session.');
@@ -315,14 +428,12 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
       return false;
     }
 
-    final studentAnswer = _selectedOption!;
+    final rawAnswer = _selectedOption?.trim();
+    final studentAnswer =
+        rawAnswer == null || rawAnswer.isEmpty ? null : rawAnswer;
     final timeTakenSec = _questionStartTime == null
         ? 1
-        : DateTime.now()
-            .difference(_questionStartTime!)
-            .inSeconds
-            .clamp(1, 36000)
-            .toInt();
+        : DateTime.now().difference(_questionStartTime!).inSeconds.clamp(1, 36000).toInt();
 
     developer.log(
       'Submitting answer: sessionId=$sessionId, questionId=$questionId, answer=$studentAnswer, timeTakenSec=$timeTakenSec',
@@ -349,20 +460,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
     return true;
   }
 
-  double _optionCardHeight(List<String> options) {
-    if (options.isEmpty) return 90;
-    final totalChars = options.fold<int>(0, (sum, item) => sum + item.length);
-    final avgChars = totalChars / options.length;
-    final maxChars = options.fold<int>(0, (max, item) {
-      return item.length > max ? item.length : max;
-    });
-
-    if (maxChars > 48 || avgChars > 28) return 150;
-    if (maxChars > 36 || avgChars > 22) return 132;
-    if (maxChars > 24 || avgChars > 16) return 114;
-    return 94;
-  }
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
@@ -373,8 +470,6 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
         _isStarted && _sessionQuestions.isNotEmpty ? _sessionQuestions[_currentQuestionIndex] : null;
     final questionText = (currentQuestion?['name'] ?? '').toString();
     final options = _parseOptions(currentQuestion?['options']);
-    final optionCardHeight = _optionCardHeight(options);
-    final optionTextMaxLines = optionCardHeight >= 132 ? 3 : 2;
 
     return Scaffold(
       body: Column(
@@ -387,29 +482,13 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
             },
           ),
           if (_isStarted)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 10),
-              color: colors.bgColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Question ${_currentQuestionIndex + 1} of ${_sessionQuestions.length}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.hintColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: (_currentQuestionIndex + 1) / _sessionQuestions.length,
-                    backgroundColor: colors.hintColor.withOpacity(0.25),
-                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                  ),
-                ],
-              ),
+            EvaluationProgressHeader(
+              colors: colors,
+              primaryColor: primaryColor,
+              currentQuestionIndex: _currentQuestionIndex,
+              totalQuestions: _sessionQuestions.length,
+              totalDurationMinutes: _totalDurationMinutes,
+              remainingSeconds: _remainingSeconds,
             ),
           Expanded(
             child: SingleChildScrollView(
@@ -433,8 +512,7 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                         ],
                       ),
                       child: questionTypesAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
+                        loading: () => const Center(child: CircularProgressIndicator()),
                         error: (error, stack) => Text(
                           'Failed to load evaluation modes: $error',
                           style: TextStyle(color: colors.textColor),
@@ -447,329 +525,46 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
                             );
                           }
 
-                          final modes = List<Map<String, dynamic>>.from(
-                            response.data,
-                          )..sort(
-                              (a, b) => _toInt(a['sort_order']).compareTo(
-                                _toInt(b['sort_order']),
-                              ),
-                            );
+                          final modes = List<Map<String, dynamic>>.from(response.data)
+                            ..sort((a, b) => _toInt(a['sort_order']).compareTo(_toInt(b['sort_order'])));
 
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              final isTwoColumn = constraints.maxWidth > 520;
-                              final cardWidth = isTwoColumn
-                                  ? (constraints.maxWidth - 12) / 2
-                                  : constraints.maxWidth;
-                              return Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
-                                children: modes.map((mode) {
-                                  final modeId = _toInt(mode['id']);
-                                  final modeName =
-                                      (mode['name'] ?? '').toString();
-                                  final isSelected =
-                                      _selectedQuestionTypeId == modeId;
-                                  return SizedBox(
-                                    width: cardWidth,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(14),
-                                      onTap: _isStartingSession
-                                          ? null
-                                          : () => _startSession(modeId),
-                                      child: AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 180),
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? primaryColor.withOpacity(0.15)
-                                              : colors.inputFillColor,
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? primaryColor
-                                                : colors.hintColor.withOpacity(
-                                                    0.3,
-                                                  ),
-                                            width: isSelected ? 2 : 1,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                modeName,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: colors.textColor,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            if (_isStartingSession &&
-                                                isSelected)
-                                              SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: primaryColor,
-                                                ),
-                                              )
-                                            else
-                                              Icon(
-                                                isSelected
-                                                    ? Icons.check_circle
-                                                    : Icons
-                                                        .radio_button_unchecked,
-                                                color: isSelected
-                                                    ? primaryColor
-                                                    : colors.hintColor,
-                                                size: 20,
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            },
+                          return EvaluationModeSelector(
+                            colors: colors,
+                            primaryColor: primaryColor,
+                            isStartingSession: _isStartingSession,
+                            selectedQuestionTypeId: _selectedQuestionTypeId,
+                            modes: modes,
+                            toInt: _toInt,
+                            onModeTap: _startSession,
                           );
                         },
                       ),
                     ),
                   ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: colors.cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  questionText,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: colors.textColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: primaryColor.withOpacity(0.2),
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    _isSpeakerEnabled
-                                        ? Icons.volume_up_rounded
-                                        : Icons.volume_off_rounded,
-                                    color: primaryColor,
-                                  ),
-                                  onPressed: () async {
-                                    final nextValue = !_isSpeakerEnabled;
-                                    setState(() => _isSpeakerEnabled = nextValue);
-                                    if (nextValue) {
-                                      await _speakCurrentQuestionFromState();
-                                    } else {
-                                      await ref.read(speechServiceProvider).stop();
-                                    }
-                                  },
-                                  tooltip: _isSpeakerEnabled
-                                      ? 'Speaker on'
-                                      : 'Speaker off',
-                                ),
-                              ),
-                            ],
-                          ),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final gridSpacing = 12.0;
-                              final cardWidth =
-                                  (constraints.maxWidth - gridSpacing) / 2;
-                              return GridView.builder(
-                                itemCount: options.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: gridSpacing,
-                                  mainAxisSpacing: gridSpacing,
-                                  childAspectRatio:
-                                      cardWidth / optionCardHeight,
-                                ),
-                                itemBuilder: (context, index) {
-                                  final optionColor =
-                                      optionColors[index % optionColors.length];
-                                  final optionValue = options[index];
-                                  final isSelected =
-                                      _selectedOption == optionValue;
-
-                                  return InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
-                                      final questionId =
-                                          _toInt(currentQuestion?['id']);
-                                      setState(() {
-                                        _selectedOption = optionValue;
-                                        if (questionId > 0) {
-                                          _selectedAnswersByQuestion[
-                                                  questionId] =
-                                              optionValue;
-                                        }
-                                      });
-                                    },
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 150),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? Color.alphaBlend(
-                                                primaryColor.withOpacity(0.25),
-                                                optionColor.withOpacity(0.24),
-                                              )
-                                            : optionColor.withOpacity(0.16),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? primaryColor
-                                              : optionColor.withOpacity(0.7),
-                                          width: isSelected ? 2 : 1.2,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Radio<String>(
-                                            value: optionValue,
-                                            groupValue: _selectedOption,
-                                            onChanged: (value) {
-                                              if (value != null) {
-                                                final questionId = _toInt(
-                                                  currentQuestion?['id'],
-                                                );
-                                                setState(() {
-                                                  _selectedOption = value;
-                                                  if (questionId > 0) {
-                                                    _selectedAnswersByQuestion[
-                                                            questionId] =
-                                                        value;
-                                                  }
-                                                });
-                                              }
-                                            },
-                                            activeColor: optionColor,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              optionValue,
-                                              maxLines: optionTextMaxLines,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                color: colors.textColor,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _isRecording
-                                  ? Colors.red.withOpacity(0.1)
-                                  : colors.inputFillColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _isRecording
-                                    ? Colors.red
-                                    : colors.hintColor.withOpacity(0.3),
-                                width: _isRecording ? 2 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Record Your Answer',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: colors.textColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isRecording
-                                          ? 'Recording in progress...'
-                                          : _recordedAnswerPath != null
-                                              ? 'Answer recorded'
-                                              : 'No recording yet',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.hintColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _isRecording
-                                        ? Colors.red
-                                        : primaryColor.withOpacity(0.2),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      _isRecording ? Icons.stop : Icons.mic,
-                                      color:
-                                          _isRecording ? Colors.white : primaryColor,
-                                      size: 28,
-                                    ),
-                                    onPressed: _toggleRecording,
-                                    tooltip: _isRecording
-                                        ? 'Stop recording'
-                                        : 'Start recording',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                    EvaluationQuestionPanel(
+                      colors: colors,
+                      primaryColor: primaryColor,
+                      questionText: questionText,
+                      isSpeakerEnabled: _isSpeakerEnabled,
+                      onSpeakerPressed: () async {
+                        final nextValue = !_isSpeakerEnabled;
+                        setState(() => _isSpeakerEnabled = nextValue);
+                        if (nextValue) {
+                          await _speakCurrentQuestionFromState();
+                        } else {
+                          await ref.read(speechServiceProvider).stop();
+                        }
+                      },
+                      isConfirmationType: _isCurrentQuestionConfirmationType,
+                      options: options,
+                      selectedOption: _selectedOption,
+                      onOptionSelected: (value) => _onMcqOptionSelected(value),
+                      isRecording: _isRecording,
+                      recordedAnswerPath: _recordedAnswerPath,
+                      onToggleRecording: _toggleRecording,
+                      isSubmittingAnswer: _isSubmittingAnswer,
+                      onConfirmCorrect: () => _onConfirmAnswer(true),
+                      onConfirmIncorrect: () => _onConfirmAnswer(false),
                     ),
                   ],
                 ],
@@ -777,45 +572,15 @@ class _EvaluationScreenState extends ConsumerState<EvaluationScreen> {
             ),
           ),
           if (_isStarted)
-            SafeArea(
-              top: false,
-              child: Container(
-                color: colors.bgColor,
-                padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: CustomSecondaryButton(
-                        label: 'Previous',
-                        onPressed: _currentQuestionIndex > 0
-                            ? () => _previousQuestion()
-                            : null,
-                        primaryColor: primaryColor,
-                        textColor: colors.textColor,
-                        height: 56,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _currentQuestionIndex < _sessionQuestions.length - 1
-                          ? CustomPrimaryButton(
-                              label: 'Next',
-                              onPressed: _isSubmittingAnswer ? null : _nextQuestion,
-                              primaryColor: primaryColor,
-                              isLoading: _isSubmittingAnswer,
-                              height: 56,
-                            )
-                          : CustomPrimaryButton(
-                              label: 'Submit',
-                              onPressed: _isSubmittingAnswer ? null : _submitEvaluation,
-                              primaryColor: primaryColor,
-                              isLoading: _isSubmittingAnswer,
-                              height: 56,
-                            ),
-                    ),
-                  ],
-                ),
-              ),
+            EvaluationBottomActions(
+              colors: colors,
+              primaryColor: primaryColor,
+              isSubmittingAnswer: _isSubmittingAnswer,
+              currentQuestionIndex: _currentQuestionIndex,
+              totalQuestions: _sessionQuestions.length,
+              onPrevious: _currentQuestionIndex > 0 ? () => _previousQuestion() : null,
+              onNext: _nextQuestion,
+              onSubmit: _submitEvaluation,
             ),
         ],
       ),

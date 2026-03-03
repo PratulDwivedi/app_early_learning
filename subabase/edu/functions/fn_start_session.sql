@@ -1,7 +1,4 @@
-CREATE OR REPLACE FUNCTION edu.fn_start_session(
-  p_student_id  bigint DEFAULT NULL::bigint,
-  p_session_id  bigint DEFAULT NULL::bigint
-)
+CREATE OR REPLACE FUNCTION edu.fn_start_session(p_student_id bigint DEFAULT NULL::bigint, p_session_id bigint DEFAULT NULL::bigint)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -264,15 +261,18 @@ BEGIN
         'options_audio_prompt', q.options_audio_prompt,
         'hint',                 q.hint,
         'image_url',            q.image_url,
-        'sort_order',           q.sort_order
+        'sort_order',           q.sort_order,
+        'is_confirmation_type', (qt.data->>'is_confirmation_type')::boolean
         -- correct_answer intentionally excluded
       )
       ORDER BY q.sort_order, q.id
     ), '[]'::jsonb)
     INTO v_questions
-    FROM edu.questions q
+    FROM edu.questions q inner join edu.question_types qt
+    on q.question_type_id = qt.id
     WHERE q.id = ANY(v_question_ids)
-      AND q.tenant_id = v_tenant_id;
+      AND q.tenant_id = v_tenant_id
+    LIMIT v_no_of_questions ;
 
     RETURN public.fn_response_success(
       p_data := jsonb_build_object(
@@ -283,7 +283,8 @@ BEGIN
         'is_resumed',             v_is_resumed,
         'total_questions',        COALESCE(array_length(v_question_ids, 1), 0),
         'total_duration_minutes', v_duration_minutes,
-        'questions',              v_questions
+        'questions',              v_questions,
+        'no_of_questions', v_no_of_questions
       ),
       p_message := format(
         'Session %s %s for student %s with %s questions.',
@@ -307,4 +308,4 @@ BEGIN
     );
   END;
 END;
-$function$;
+$function$

@@ -1,13 +1,9 @@
-CREATE OR REPLACE FUNCTION edu.fn_submit_answer(
-  p_session_id      bigint  DEFAULT NULL,
-  p_question_id     bigint  DEFAULT NULL,
-  p_student_answer  text    DEFAULT NULL,   -- NULL = skipped
-  p_time_taken_sec  integer DEFAULT NULL
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $function$
+create or replace function edu.fn_submit_answer (
+  p_session_id bigint default null::bigint,
+  p_question_id bigint default null::bigint,
+  p_student_answer text default null::text,
+  p_time_taken_sec integer default null::integer
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER as $function$
 /*
 ================================================
 Copyright     : Early Learning App, 2026
@@ -40,6 +36,8 @@ DECLARE
   v_question_order  smallint;
   v_session_data    jsonb;
   v_student_id      bigint;
+  v_question_type_id  smallint;
+  v_is_confirmation_type      boolean;
 BEGIN
   BEGIN
     SELECT tenant_id, user_id, caller_id
@@ -76,8 +74,8 @@ BEGIN
     END IF;
 
     -- Fetch correct answer for auto-grading
-    SELECT correct_answer
-    INTO v_correct_answer
+    SELECT correct_answer , question_type_id
+    INTO v_correct_answer , v_question_type_id
     FROM edu.questions
     WHERE id        = p_question_id
       AND tenant_id = v_tenant_id
@@ -87,13 +85,31 @@ BEGIN
       RAISE EXCEPTION 'Question ID % not found or inactive.', p_question_id;
     END IF;
 
+    SELECT COALESCE((data->>'is_confirmation_type')::boolean, false)
+    INTO v_is_confirmation_type
+    FROM edu.question_types
+    WHERE id = v_question_type_id
+      AND is_active = true
+      AND tenant_id = v_tenant_id;
+
     -- ── Auto-grade ────────────────────────────────────────────
     -- NULL answer = skipped, is_correct stays NULL
+    IF v_is_confirmation_type = true then
 
-    IF p_student_answer IS NOT NULL THEN
-      v_is_correct := (trim(lower(p_student_answer)) = trim(lower(v_correct_answer)));
-    ELSE
-      v_is_correct := NULL;
+      IF p_student_answer ='correct' THEN
+          v_is_correct := true;
+        ELSE
+          v_is_correct := false;
+        END IF;
+
+    else
+
+        IF p_student_answer IS NOT NULL THEN
+          v_is_correct := (trim(lower(p_student_answer)) = trim(lower(v_correct_answer)));
+        ELSE
+          v_is_correct := NULL;
+        END IF;
+
     END IF;
 
     -- ── Derive question_order from session question_ids array ──
@@ -156,27 +172,33 @@ BEGIN
 
     UPDATE edu.sessions SET
       attempted  = (
+
         SELECT COUNT(*)
         FROM edu.session_responses
         WHERE session_id = p_session_id
-          AND student_answer IS NOT NULL
+        AND tenant_id = v_tenant_id
+        AND student_answer IS NOT NULL
+
       ),
       correct    = (
         SELECT COUNT(*)
         FROM edu.session_responses
         WHERE session_id = p_session_id
+        AND tenant_id = v_tenant_id
           AND is_correct = true
       ),
       incorrect  = (
         SELECT COUNT(*)
         FROM edu.session_responses
         WHERE session_id = p_session_id
+        AND tenant_id = v_tenant_id
           AND is_correct = false
       ),
       skipped    = (
         SELECT COUNT(*)
         FROM edu.session_responses
         WHERE session_id = p_session_id
+        AND tenant_id = v_tenant_id
           AND student_answer IS NULL
       ),
       updated_by = v_user_id,
@@ -222,4 +244,4 @@ BEGIN
     );
   END;
 END;
-$function$;
+$function$
