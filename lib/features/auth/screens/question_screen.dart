@@ -175,9 +175,8 @@ class _QuestionPageState extends ConsumerState<QuestionPage> {
 
       if (!mounted) return;
 
-      if (metadata?.storedFileName != null &&
-          metadata!.storedFileName!.trim().isNotEmpty) {
-        _imageUrlController.text = metadata.storedFileName!.trim();
+      if (metadata?.fileName != null && metadata!.fileName!.trim().isNotEmpty) {
+        _imageUrlController.text = metadata.fileName!.trim();
         AppSnackbarService.success('Image uploaded successfully.');
       } else {
         AppSnackbarService.error('Image upload failed.');

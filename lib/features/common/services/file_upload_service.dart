@@ -13,12 +13,12 @@ abstract class FileUploadService {
   }
 
   // File upload methods
-  Future<FileMetadataModel?> uploadFile({
+  Future<FileUploadResponse?> uploadFile({
     required File file,
     Map<String, dynamic>? data,
   });
 
-  Future<FileMetadataModel?> uploadFileByPath({
+  Future<FileUploadResponse?> uploadFileByPath({
     required String filePath,
     Map<String, dynamic>? data,
   });

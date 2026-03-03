@@ -20,3 +20,32 @@ class FileMetadataModel {
     );
   }
 }
+
+
+class FileUploadResponse {
+  final String message;
+  final String fileName;
+  final String publicUrl;
+
+  FileUploadResponse({
+    required this.message,
+    required this.fileName,
+    required this.publicUrl,
+  });
+
+  factory FileUploadResponse.fromJson(Map<String, dynamic> json) {
+    return FileUploadResponse(
+      message: json['message'] ?? '',
+      fileName: json['file_name'] ?? '',
+      publicUrl: json['public_url'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'message': message,
+      'file_name': fileName,
+      'public_url': publicUrl,
+    };
+  }
+}

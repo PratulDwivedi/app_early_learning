@@ -17,7 +17,7 @@ class ApiRoutes {
   static const String submitAnswer = 'edu.fn_submit_answer';
   static const String completeSession = 'edu.fn_complete_session';
   static const String updateProfilePic = 'edu.fn_update_profile_pic';
-  static const String uploadFile = 'edu/v1/upload-file';
+  static const String uploadFile = 'functions/v1/upload-file';
   static const String summaryCount = 'edu.fn_get_student_summary';
   static const String fileMetadata = '';
   static const String htmlContent = '';

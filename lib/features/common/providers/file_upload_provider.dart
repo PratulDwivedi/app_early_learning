@@ -15,7 +15,7 @@ final profilePictureUploadProvider = FutureProvider.family<String?, File>((
   final metadata = await service.uploadFile(file: file);
 
   if (metadata != null) {
-    return metadata.storedFileName;
+    return metadata.fileName;
   }
   return null;
 });

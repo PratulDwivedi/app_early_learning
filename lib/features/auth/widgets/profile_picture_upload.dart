@@ -149,11 +149,11 @@ class _ProfilePictureUploadState extends ConsumerState<ProfilePictureUpload> {
       if (metadata != null) {
         // Update profile picture in database
         final response = await authService.updateProfilePicture(
-          metadata.storedFileName!,
+          metadata.fileName!,
         );
 
         if (response.isSuccess) {
-          widget.onProfilePicUpdated?.call(metadata.storedFileName!);
+          widget.onProfilePicUpdated?.call(metadata.fileName!);
           _showSuccessSnackBar('Profile picture updated successfully');
         } else {
           _showErrorSnackBar('Failed to update profile: ${response.message}');
